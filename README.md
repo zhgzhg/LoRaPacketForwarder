@@ -9,11 +9,11 @@ Its goal is to provide simple LoRa forwarder for:
 * Linux - OrangePi, RaspberryPi, etc.
 * Very basic support for Semtech UDP protocol v2 - uplink and stats
     * The Things Network - tested
-* SPI communication based on wiringPi (Orange Pi or Raspberry PI) with LoRa chips:
+* SPI communication based on wiringPi and modified LoRaLib for Linux (Orange Pi or Raspberry PI) with LoRa chips:
     * SX1278 - tested
     * Probably supports too:
         * SX127x
-	* RFMxx
+        * RFMxx
 * Simple JSON configuration file
 
 How to Use
@@ -31,11 +31,11 @@ The following steps have been tested on Arbian v5.73.
 
 ### Raspberry PI and others (not tested):  compile & install
 
-
 * WiringPi is preinstalled - no actions needed
 * Compile this project with make
 
-## Running
+
+## Running LoRaPacketForwarder
 
 * Create config.json by copying config.json.template
     * edit the pinout (execute gipo readall to check wiringPi pin numbers that need to be specified)
@@ -47,5 +47,5 @@ The following steps have been tested on Arbian v5.73.
 * To execute the application and also specify network interface used for ID generation
     * ./LoRaPktFwd <interface_name>
         * The default one is eth0
-	* Example: ./LoRaPktFwd wlan0
+        * Example: ./LoRaPktFwd wlan0
 
