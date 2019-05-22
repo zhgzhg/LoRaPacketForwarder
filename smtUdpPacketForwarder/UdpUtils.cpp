@@ -246,7 +246,7 @@ void PublishLoRaProtocolPacket(NetworkConf_t &netCfg, PlatformInfo_t &cfg, LoRaD
   writer.String("lsnr");
   writer.SetMaxDecimalPlaces(1);
   writer.Double(std::round(loraPacket.SNR * 10) / 10);
-  writer.SetMaxDecimalPlaces(rapidjson::Writer::kDefaultMaxDecimalPlaces);
+  writer.SetMaxDecimalPlaces(rapidjson::Writer<rapidjson::StringBuffer>::kDefaultMaxDecimalPlaces);
   writer.String("size");
   writer.Uint(loraPacket.msg_sz);
   writer.String("data");
