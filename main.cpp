@@ -110,6 +110,7 @@ int main(int argc, char **argv) {
   uint32_t accum = 0; 
 
   LoRaDataPkt_t loraDataPacket;
+  String str;
 
   while (true) {
     if ((accum % sendStatPktIntervalMs) == 0) {
@@ -120,9 +121,9 @@ int main(int argc, char **argv) {
       printf("done\n");
     }
 
-    String str;  
     if (receiveData(loraDataPacket, str)) {
       PublishLoRaProtocolPacket(netCfg, cfg, loraDataPacket);
+      str.clear();
     } else {
       delay(delayIntervalMs);
     }
