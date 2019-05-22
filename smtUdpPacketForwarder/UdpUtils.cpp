@@ -240,11 +240,13 @@ void PublishLoRaProtocolPacket(NetworkConf_t &netCfg, PlatformInfo_t &cfg, LoRaD
   char cr[4] = "4/x";
   snprintf(cr, sizeof(cr), "4/%d", cfg.lora_chip_settings.coding_rate);
   writer.String(cr);
-      
+
   writer.String("rssi");
   writer.Int(((int)loraPacket.RSSI));
   writer.String("lsnr");
-  writer.Double(std::round(loraPacket.SNR * 10000) / 10000);
+  writer.SetMaxDecimalPlaces(1);
+  writer.Double(std::round(loraPacket.SNR * 10) / 10);
+  writer.SetMaxDecimalPlaces(rapidjson::Writer::kDefaultMaxDecimalPlaces);
   writer.String("size");
   writer.Uint(loraPacket.msg_sz);
   writer.String("data");
@@ -259,8 +261,7 @@ void PublishLoRaProtocolPacket(NetworkConf_t &netCfg, PlatformInfo_t &cfg, LoRaD
   writer.EndObject();
 
   std::string json = sb.GetString();
-  //printf(json.c_str());
-  //printf("\n");
+  //printf("%s\n", json.c_str());
 
   memcpy(buff_up + 12, json.c_str(), json.size());
   for (Server_t &serv : cfg.servers) {
