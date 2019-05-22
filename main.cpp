@@ -11,16 +11,16 @@
 #include <LoRaLib.h>
 
 static LoRaPacketTrafficStats_t loraPacketStats;
-static SX1278 lora;
+static SX1278 *lora;
 
 bool receiveData(LoRaDataPkt_t &pkt, String &msg) {
-  int state = lora.receive(msg);
+  int state = lora->receive(msg);
 
   // you can also receive data as byte array
   /*
     size_t len = 8;
     byte byteArr[len];
-    int state = lora.receive(byteArr, len);
+    int state = lora->receive(byteArr, len);
   */
 
   if (state == ERR_NONE) { // packet was successfully received
@@ -33,18 +33,18 @@ bool receiveData(LoRaDataPkt_t &pkt, String &msg) {
 
     // print RSSI (Received Signal Strength Indicator)
     // of the last received packet
-    printf("RSSI:\t\t\t%d dBm\n", lora.getRSSI());
+    printf("RSSI:\t\t\t%d dBm\n", lora->getRSSI());
 
     // print SNR (Signal-to-Noise Ratio)
     // of the last received packet
-    printf("SNR:\t\t\t%f dB\n", lora.getSNR());
+    printf("SNR:\t\t\t%f dB\n", lora->getSNR());
 
     // print frequency error
     // of the last received packet
-    printf("Frequency error:\t%f Hz\n", lora.getFrequencyError());
+    printf("Frequency error:\t%f Hz\n", lora->getFrequencyError());
 
-    pkt.RSSI = lora.getRSSI();
-    pkt.SNR = lora.getSNR();
+    pkt.RSSI = lora->getRSSI();
+    pkt.SNR = lora->getSNR();
     pkt.msg = (const uint8_t*) msg.c_str();
     pkt.msg_sz = msg.length();
     return true;
@@ -78,13 +78,16 @@ int main(int argc, char **argv) {
 
   PrintConfiguration(cfg);
 
-  lora = new LoRa(cfg.lora_chip_settings.pin_nss_cs,
-    cfg.lora_chip_settings.pin_dio0, cfg.lora_chip_settings.pin_dio1);
+  lora = new SX1278(new LoRa(
+      cfg.lora_chip_settings.pin_nss_cs,
+      cfg.lora_chip_settings.pin_dio0,
+      cfg.lora_chip_settings.pin_dio1
+    )
+  );
 
-  //int state = lora.begin();
   int8_t power = 17, currentLimit = 100, gain = 0;
   
-  uint16_t state = lora.begin(
+  uint16_t state = lora->begin(
     cfg.lora_chip_settings.carrier_frequency_mhz,
     cfg.lora_chip_settings.bandwidth_khz,
     cfg.lora_chip_settings.spreading_factor,
@@ -100,7 +103,6 @@ int main(int argc, char **argv) {
     printf("LoRa chip setup success!\n");
   } else {
     printf("LoRa chip setup failed, code %d\n", state);
-    delete lora;
     return 1;
   }
 
@@ -112,8 +114,9 @@ int main(int argc, char **argv) {
 
   while (true) {
     if ((accum % sendStatPktIntervalMs) == 0) {
-      printf("Sending stat update to server(s)...\n");
+      printf("Sending stat update to server(s)... ");
       PublishStatProtocolPacket(netCfg, cfg, loraPacketStats);
+      printf("done\n");
     }
 
     String str;  
@@ -126,5 +129,4 @@ int main(int argc, char **argv) {
     accum += delayIntervalMs;
   }
   
-  delete lora;
 }
