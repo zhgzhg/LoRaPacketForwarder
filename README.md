@@ -1,11 +1,11 @@
 LoRa UDP Packet Forwarder for Linux
 ===================================
 
-Single channel LoRa UDP packet forwarder ideal for developing or for
+Single channel LoRa UDP packet forwarder ideal for development or
 testing purposes. Can only receive LoRa data and upload it to one 1 more
 servers. 
-This project is ideal for DIY the cheapest possible LoRa "gateway"
-consisting of single board computer and a $4 LoRa module.
+This project is ideal for DIY of one of the cheapest LoRa "gateway"s
+consisting of a single-board computer and a $4 LoRa module.
 
 The goal of the project is to provide simple LoRa forwarder for:
 
