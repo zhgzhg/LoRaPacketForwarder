@@ -10,15 +10,8 @@
 
 #include "LoRaLib/LoRaLib.h"
 
-#define DIO0 9 // WIRINGPI
-#define NSS 6
-#define DIO1 10
-
-
 static LoRaPacketTrafficStats_t loraPacketStats;
-
-SX1278 lora = new LoRa(NSS, DIO0, DIO1);
-
+static SX1278 lora;
 
 bool receiveData(LoRaDataPkt_t &pkt, String &msg) {
   int state = lora.receive(msg);
@@ -30,12 +23,9 @@ bool receiveData(LoRaDataPkt_t &pkt, String &msg) {
     int state = lora.receive(byteArr, len);
   */
 
-  if (state == ERR_NONE) {
+  if (state == ERR_NONE) { // packet was successfully received
     ++loraPacketStats.recv_packets;
     ++loraPacketStats.recv_packets_crc_good;
-
-    // packet was successfully received
-    printf("success!\n");
 
     // print data of the packet
     printf("Data:\t\t\t");
@@ -62,6 +52,7 @@ bool receiveData(LoRaDataPkt_t &pkt, String &msg) {
   } else if (state == ERR_RX_TIMEOUT) {
     // timeout occurred while waiting for a packet
     //printf("timeout!\n");
+    return false;
 
   } else if (state == ERR_CRC_MISMATCH) {
     ++loraPacketStats.recv_packets;
@@ -87,11 +78,29 @@ int main(int argc, char **argv) {
 
   PrintConfiguration(cfg);
 
-  int state = lora.begin();
+  lora = new LoRa(cfg.lora_chip_settings.pin_nss_cs,
+    cfg.lora_chip_settings.pin_dio0, cfg.lora_chip_settings.pin_dio1);
+
+  //int state = lora.begin();
+  int8_t power = 17, currentLimit = 100, gain = 0;
+  
+  uint16_t state = lora.begin(
+    cfg.lora_chip_settings.carrier_frequency_mhz,
+    cfg.lora_chip_settings.bandwidth_khz,
+    cfg.lora_chip_settings.spreading_factor,
+    cfg.lora_chip_settings.coding_rate,
+    cfg.lora_chip_settings.sync_word,
+    power,
+    currentLimit,
+    cfg.lora_chip_settings.preamble_length,
+    gain
+  );
+  
   if (state == ERR_NONE) {
     printf("LoRa chip setup success!\n");
   } else {
     printf("LoRa chip setup failed, code %d\n", state);
+    delete lora;
     return 1;
   }
 
@@ -107,7 +116,7 @@ int main(int argc, char **argv) {
       PublishStatProtocolPacket(netCfg, cfg, loraPacketStats);
     }
 
-    String str;    
+    String str;  
     if (receiveData(loraDataPacket, str)) {
       PublishLoRaProtocolPacket(netCfg, cfg, loraDataPacket);
     } else {
@@ -116,4 +125,6 @@ int main(int argc, char **argv) {
 
     accum += delayIntervalMs;
   }
+  
+  delete lora;
 }
