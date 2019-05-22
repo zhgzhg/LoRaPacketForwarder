@@ -1,0 +1,33 @@
+{
+  "pin_nss_cs": 6,
+  "pin_dio0": 9,
+  "pin_dio1": 10,
+
+  "spreading_factor": 7,
+  "carrier_frequency_mhz": 434.0,
+  "bandwidth_khz": 125.0,
+  "coding_rate": 5,
+  "sync_word": 52,
+  "preamble_length": 6,
+
+  "latitude": 0.0,
+  "longtitude": 0.0,
+  "altitude_meters": 10,
+
+  "platform_definition": "1chan_uplink_pkt_fwd",
+  "platform_email": "contact@email.com",
+  "platform_description": "OPiPC LoRa 1-Ch GW",
+
+  "servers": [
+    {
+      "address": "router.us.thethings.network",
+      "port": 1700,
+      "enabled": false
+    },
+    {
+      "address": "router.eu.thethings.network",
+      "port": 1700,
+      "enabled": true
+    }
+  ]
+}
