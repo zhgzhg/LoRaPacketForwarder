@@ -1,8 +1,11 @@
 LoRa UDP Packet Forwarder for Linux
 ===================================
 
-Single channel LoRa UDP packet forwarder based on several libraries and
-existing projects.
+Single channel LoRa UDP packet forwarder ideal for developing or for
+testing purposes. Can only receive LoRa data and upload it to one 1 more
+servers. 
+This project is ideal for DIY the cheapest possible LoRa "gateway"
+consisting of single board computer and a $4 LoRa module.
 
 The goal of the project is to provide simple LoRa forwarder for:
 
@@ -11,13 +14,85 @@ The goal of the project is to provide simple LoRa forwarder for:
     * The Things Network - tested
 * SPI communication based on wiringPi and modified LoRaLib for Linux (Orange Pi or Raspberry PI) with LoRa chips:
     * SX1278 - tested
-    * Probably supports too:
-        * SX127x
-        * RFM9x
-* Simple JSON configuration file
+    * Probably supports whole chips series like:
+        * SX127x 
+        * RFM9x 
+* Basic JSON configuration file
 
 How to Use
 ==========
+
+## Hardware Setup
+
+Along with network connection on your single-board (WiFi, Ethernet...)
+the following pins of your device have to be allocated:
+
+* SPI module pins
+    * MISO
+    * MOSI
+    * CLK
+* 3 GPIO pins for connecting to LoRa's module:
+    * CS (a.k.a NSS)
+    * DIO 0
+    * DIO 1
+* power pins - 1 for VCC (usually 3.3V) and 1 for GND
+
+Please refer to command `gpio readall` (also check the next sections) to
+obtain more information for your particular board. Look into the WiringPi
+numbers as well, because the configuration file expects that numbering
+scheme.
+
+For e.g.:
+
+```
+
+ +------+-----+----------+------+---+OrangePiH3+---+------+----------+-----+------+
+ | GPIO | wPi |   Name   | Mode | V | Physical | V | Mode | Name     | wPi | GPIO |
+ +------+-----+----------+------+---+----++----+---+------+----------+-----+------+
+ |      |     |     3.3v |      |   |  1 || 2  |   |      | 5v       |     |      |
+ |   12 |   0 |    SDA.0 | ALT2 | 0 |  3 || 4  |   |      | 5V       |     |      |
+ |   11 |   1 |    SCL.0 | ALT2 | 0 |  5 || 6  |   |      | 0v       |     |      |
+ |    6 |   2 |      PA6 |  OFF | 0 |  7 || 8  | 0 | OFF  | TxD3     | 3   | 13   |
+ |      |     |       0v |      |   |  9 || 10 | 0 | OFF  | RxD3     | 4   | 14   |
+ |    1 |   5 |     RxD2 |  OFF | 0 | 11 || 12 | 1 | OUT  | PD14     | 6   | 110  |
+ |    0 |   7 |     TxD2 |  OFF | 1 | 13 || 14 |   |      | 0v       |     |      |
+ |    3 |   8 |     CTS2 |  OFF | 0 | 15 || 16 | 0 | IN   | PC04     | 9   | 68   |
+ |      |     |     3.3v |      |   | 17 || 18 | 1 | IN   | PC07     | 10  | 71   |
+ |   64 |  11 |     MOSI | ALT3 | 0 | 19 || 20 |   |      | 0v       |     |      |
+ |   65 |  12 |     MISO | ALT3 | 0 | 21 || 22 | 0 | OFF  | RTS2     | 13  | 2    |
+ |   66 |  14 |     SCLK | ALT3 | 0 | 23 || 24 | 0 | ALT3 | CE0      | 15  | 67   |
+ |      |     |       0v |      |   | 25 || 26 | 0 | OFF  | PA21     | 16  | 21   |
+ |   19 |  17 |    SDA.1 | ALT3 | 0 | 27 || 28 | 0 | ALT3 | SCL.1    | 18  | 18   |
+ |    7 |  19 |     PA07 |  OFF | 0 | 29 || 30 |   |      | 0v       |     |      |
+ |    8 |  20 |     PA08 |  OFF | 0 | 31 || 32 | 0 | OFF  | RTS1     | 21  | 200  |
+ |    9 |  22 |     PA09 |  OFF | 0 | 33 || 34 |   |      | 0v       |     |      |
+ |   10 |  23 |     PA10 |  OFF | 0 | 35 || 36 | 0 | OFF  | CTS1     | 24  | 201  |
+ |   20 |  25 |     PA20 |  OFF | 0 | 37 || 38 | 0 | OFF  | TxD1     | 26  | 198  |
+ |      |     |       0v |      |   | 39 || 40 | 0 | OFF  | RxD1     | 27  | 199  |
+ |    4 |  28 |     PA04 | ALT2 | 0 | 41 || 42 | 0 | ALT2 | PA05     | 29  | 5    |
+ +------+-----+----------+------+---+----++----+---+------+----------+-----+------+
+ | GPIO | wPi |   Name   | Mode | V | Physical | V | Mode | Name     | wPi | GPIO |
+ +------+-----+----------+------+---+OrangePiH3+---+------+----------+-----+------+
+
+   ___
+   \_/     SX1278 module
+    |      --------------
+     \--- | ANT      GND |===== Pin #20 [OrangePiH3 Physical]
+          | GND     DIO1 |===== Pin #18 [OrangePiH3 Physical] / [a.k.a WiringPi pin ## 10]
+          |         DIO2 |
+          |         DIO3 |
+          |          VCC |===== Pin # 1 [OrangePiH3 Physical]
+          |         MISO |===== Pin #21 [OrangePiH3 Physical] / [[a.k.a WiringPi pin ## 12]]
+          |         MOSI |===== Pin #19 [OrangePiH3 Physical] / [[a.k.a WiringPi pin ## 11]]
+          |         SLCK |===== Pin #23 [OrangePiH3 Physical] / [[a.k.a WiringPi pin ## 14]]
+          |          NSS |===== Pin #12 [OrangePiH3 Physical] / [a.k.a WiringPi pin ## 6]
+          |         DIO0 |===== Pin #16 [OrangePiH3 Physical] / [a.k.a WiringPi pin ## 9]
+          |         REST |
+          |          GND |
+           --------------
+
+```
+
 
 ## Clone the project
 `git clone --recurse-submodules https://github.com/zhgzhg/LoRaPacketForwarder.git`
@@ -27,9 +102,9 @@ How to Use
 
 The following steps have been tested on Arbian v5.73.
 
-* Compile wiringPi for Orange PI with ./build
+* Compile wiringPi for Orange PI with ./build command
     * Optionally specify PLATFORM before to change the board config. ( for e.g. for Orange Pi PC: PLATFORM=OrangePi_H3 ./build ).
-    * execute gpio readall to see the board pinout scheme table
+    * execute "gpio readall" to see the board pinout scheme table
 * Compile this project with make
 
 
