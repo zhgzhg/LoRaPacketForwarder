@@ -105,13 +105,13 @@ The following steps have been tested on Arbian v5.73.
 * Compile wiringPi for Orange PI with `./build` command
     * Optionally specify PLATFORM before to change the board config. ( for e.g. for Orange Pi PC: `PLATFORM=OrangePi_H3 ./build` ).
     * execute `gpio readall` to see the board pinout scheme table
-* Compile this project with make
+* Compile this project with `make`
 
 
 ### Raspberry PI and others (not tested):  compile & install
 
 * WiringPi is pre-installed - no actions needed
-* Compile this project with make
+* Compile this project with `make`
 
 
 ## Running LoRa UDP Packet Forwarder
