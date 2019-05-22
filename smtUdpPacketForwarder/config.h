@@ -86,8 +86,6 @@ typedef struct LoRaPacketTrafficStats {
   uint32_t recv_packets_crc_good;
   uint32_t forw_packets;
   uint32_t forw_packets_crc_good;
-  
-
 } LoRaPacketTrafficStats_t;
 
 typedef struct LoRaDataPkt {
