@@ -52,6 +52,16 @@ The following steps have been tested on Arbian v5.73.
     * ./LoRaPktFwd <interface_name>
         * The default one is eth0
         * Example: ./LoRaPktFwd wlan0
+        
+
+## Dependencies
+
+LoRa UDP Packet Forwarder relies on the following programs and libraries:
+
+* g++ supporting C++14 standard
+* make
+* WiringPi
+
 
 ### This project is influenced and contains code from:
 
