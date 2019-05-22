@@ -56,8 +56,13 @@ The following steps have been tested on Arbian v5.73.
 ### This project is influenced and contains code from:
 
 [https://github.com/jgromes/LoRaLib](https://github.com/jgromes/LoRaLib)
+
 [https://github.com/adafruit/single_chan_pkt_fwd](https://github.com/adafruit/single_chan_pkt_fwd)
+
 [https://github.com/orangepi-xunlong/wiringOP](https://github.com/orangepi-xunlong/wiringOP)
+
 [https://github.com/Lora-net/packet_forwarder](https://github.com/Lora-net/packet_forwarder)
+
 [https://www.gw-openscience.org/static/js/gpstimeutil.js](https://www.gw-openscience.org/static/js/gpstimeutil.js)
+
 [https://github.com/Tencent/rapidjson](https://github.com/Tencent/rapidjson)
