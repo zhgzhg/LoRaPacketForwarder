@@ -26,22 +26,23 @@ bool receiveData(LoRaDataPkt_t &pkt, String &msg) {
   if (state == ERR_NONE) { // packet was successfully received
     ++loraPacketStats.recv_packets;
     ++loraPacketStats.recv_packets_crc_good;
-
+    
     // print data of the packet
-    printf("Data:\t\t\t");
-    printf("%s\n", msg.c_str());
+    
+    printf("\nReceived packet:\n");
+    printf(" Data:\t\t\t%s\n", msg.c_str());
 
     // print RSSI (Received Signal Strength Indicator)
     // of the last received packet
-    printf("RSSI:\t\t\t%d dBm\n", lora->getRSSI());
+    printf(" RSSI:\t\t\t%d dBm\n", lora->getRSSI());
 
     // print SNR (Signal-to-Noise Ratio)
     // of the last received packet
-    printf("SNR:\t\t\t%f dB\n", lora->getSNR());
+    printf(" SNR:\t\t\t%f dB\n", lora->getSNR());
 
     // print frequency error
     // of the last received packet
-    printf("Frequency error:\t%f Hz\n", lora->getFrequencyError());
+    printf(" Frequency error:\t%f Hz\n", lora->getFrequencyError());
 
     pkt.RSSI = lora->getRSSI();
     pkt.SNR = lora->getSNR();
@@ -49,16 +50,14 @@ bool receiveData(LoRaDataPkt_t &pkt, String &msg) {
     pkt.msg_sz = msg.length();
     return true;
 
-  } else if (state == ERR_RX_TIMEOUT) {
+  } /*else if (state == ERR_RX_TIMEOUT) {
     // timeout occurred while waiting for a packet
     //printf("timeout!\n");
     return false;
-
-  } else if (state == ERR_CRC_MISMATCH) {
-    ++loraPacketStats.recv_packets;
- 
+  }*/ else if (state == ERR_CRC_MISMATCH) {
     // packet was received, but is malformed
-    printf("CRC error!\n");
+    ++loraPacketStats.recv_packets;
+    printf("Received packet CRC error - ignored!\n");
   }
   
   return false;
@@ -116,6 +115,8 @@ int main(int argc, char **argv) {
     if ((accum % sendStatPktIntervalMs) == 0) {
       printf("Sending stat update to server(s)... ");
       PublishStatProtocolPacket(netCfg, cfg, loraPacketStats);
+      ++loraPacketStats.forw_packets_crc_good;
+      ++loraPacketStats.forw_packets;
       printf("done\n");
     }
 
