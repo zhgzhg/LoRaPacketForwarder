@@ -203,7 +203,7 @@ void PublishLoRaProtocolPacket(NetworkConf_t &netCfg, PlatformInfo_t &cfg, LoRaD
   //uint32_t tmst = (uint32_t)(now.tv_sec * 1000000 + now.tv_usec);
 
   // unix epoch in seconds ts to GPS timestamp in millis
-  uint32_t tmst = (uint32_t) std::round( (unix2gps(now.tv_sec) * 1000.0) + (now.tv_usec / 1000) );
+  uint64_t tmst = std::round( (unix2gps(now.tv_sec) * 1000.0) + (now.tv_usec / 1000) );
 
   char compact_iso8610_time[28];
   strftime(compact_iso8610_time, sizeof compact_iso8610_time, "%FT%T", gmtime(&now.tv_sec));
@@ -219,7 +219,7 @@ void PublishLoRaProtocolPacket(NetworkConf_t &netCfg, PlatformInfo_t &cfg, LoRaD
   writer.String("time");
   writer.String(compact_iso8610_time);
   writer.String("tmst");
-  writer.Uint(tmst); 
+  writer.Uint64(tmst); 
   writer.String("freq");
   writer.Double(cfg.lora_chip_settings.carrier_frequency_mhz);
   writer.String("chan");
@@ -242,10 +242,9 @@ void PublishLoRaProtocolPacket(NetworkConf_t &netCfg, PlatformInfo_t &cfg, LoRaD
   writer.String(cr);
       
   writer.String("rssi");
-  writer.Int(((int)loraPacket.SNR));
+  writer.Int(((int)loraPacket.RSSI));
   writer.String("lsnr");
-
-  writer.Double(std::round(loraPacket.RSSI * 10000) / 10000);
+  writer.Double(std::round(loraPacket.SNR * 10000) / 10000);
   writer.String("size");
   writer.Uint(loraPacket.msg_sz);
   writer.String("data");
