@@ -259,8 +259,8 @@ void PublishLoRaProtocolPacket(NetworkConf_t &netCfg, PlatformInfo_t &cfg, LoRaD
   writer.EndObject();
 
   std::string json = sb.GetString();
-  printf(json.c_str());
-  printf("\n");
+  //printf(json.c_str());
+  //printf("\n");
 
   memcpy(buff_up + 12, json.c_str(), json.size());
   for (Server_t &serv : cfg.servers) {
