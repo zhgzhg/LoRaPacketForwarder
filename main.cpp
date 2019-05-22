@@ -8,7 +8,7 @@
 #include "smtUdpPacketForwarder/ConfigFileParser.h"
 #include "smtUdpPacketForwarder/UdpUtils.h"
 
-#include "LoRaLib/LoRaLib.h"
+#include <LoRaLib.h>
 
 static LoRaPacketTrafficStats_t loraPacketStats;
 static SX1278 lora;
