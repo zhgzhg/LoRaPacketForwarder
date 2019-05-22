@@ -218,10 +218,10 @@ void PublishLoRaProtocolPacket(NetworkConf_t &netCfg, PlatformInfo_t &cfg, LoRaD
   writer.StartObject();
   writer.String("time");
   writer.String(compact_iso8610_time);
-  writer.String("tmms")
+  writer.String("tmms");
   writer.Uint64(tmms); 
   writer.String("tmst");
-  writer.Uint(tmst)
+  writer.Uint(tmst);
   writer.String("freq");
   writer.Double(cfg.lora_chip_settings.carrier_frequency_mhz);
   writer.String("chan");
