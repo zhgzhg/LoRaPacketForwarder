@@ -1,6 +1,6 @@
 [submodule "LoRaLib"]
 	path = LoRaLib
-	url = git@github.com:zhgzhg/LoRaLib.git
+	url = https://github.com/zhgzhg/LoRaLib.git
 [submodule "wiringOP"]
 	path = wiringOP
-	url = git@github.com:zhgzhg/wiringOP.git
+	url = https://github.com/zhgzhg/wiringOP.git
