@@ -102,31 +102,31 @@ For e.g.:
 
 The following steps have been tested on Arbian v5.73.
 
-* Compile wiringPi for Orange PI with ./build command
-    * Optionally specify PLATFORM before to change the board config. ( for e.g. for Orange Pi PC: PLATFORM=OrangePi_H3 ./build ).
-    * execute "gpio readall" to see the board pinout scheme table
+* Compile wiringPi for Orange PI with `./build` command
+    * Optionally specify PLATFORM before to change the board config. ( for e.g. for Orange Pi PC: `PLATFORM=OrangePi_H3 ./build` ).
+    * execute `gpio readall` to see the board pinout scheme table
 * Compile this project with make
 
 
 ### Raspberry PI and others (not tested):  compile & install
 
-* WiringPi is preinstalled - no actions needed
+* WiringPi is pre-installed - no actions needed
 * Compile this project with make
 
 
 ## Running LoRa UDP Packet Forwarder
 
 * Create config.json by copying config.json.template
-    * edit the pinout (execute gipo readall to check wiringPi pin numbers that need to be specified)
+    * edit the pinout (execute `gpio readall` to check wiringPi pin numbers that need to be specified)
     * edit the rest parameters accordingly
 
 * To execute the application:
-    * ./LoRaPktFwd
+    * `./LoRaPktFwd`
 
 * To execute the application and also specify network interface used for ID generation
     * ./LoRaPktFwd <interface_name>
         * The default one is eth0
-        * Example: ./LoRaPktFwd wlan0
+        * Example: `./LoRaPktFwd wlan0`
         
 
 ## Dependencies
