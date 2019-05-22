@@ -202,8 +202,8 @@ void PublishLoRaProtocolPacket(NetworkConf_t &netCfg, PlatformInfo_t &cfg, LoRaD
 
   //uint32_t tmst = (uint32_t)(now.tv_sec * 1000000 + now.tv_usec);
 
-  uint32_t tmst = (uint32_t) unix2gps((long double)now.tv_sec);
-  tmst = tmst * 1000 + (now.tv_usec / 1000); // now tmst is in GPS millis timestamp
+  // unix epoch in seconds ts to GPS timestamp in millis
+  uint32_t tmst = (uint32_t) std::round( (unix2gps(now.tv_sec) * 1000.0) + (now.tv_usec / 1000) );
 
   char compact_iso8610_time[28];
   strftime(compact_iso8610_time, sizeof compact_iso8610_time, "%FT%T", gmtime(&now.tv_sec));
