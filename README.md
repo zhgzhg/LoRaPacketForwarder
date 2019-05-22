@@ -24,8 +24,8 @@ How to Use
 
 ## Hardware Setup
 
-Along with network connection on your single-board (WiFi, Ethernet...)
-the following pins of your device have to be allocated:
+Along with network connection on your single-board computer (WiFi,
+Ethernet...) the following pins on your device have to be allocated:
 
 * SPI module pins
     * MISO
