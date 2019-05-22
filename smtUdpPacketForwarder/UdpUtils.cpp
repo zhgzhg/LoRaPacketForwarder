@@ -200,10 +200,10 @@ void PublishLoRaProtocolPacket(NetworkConf_t &netCfg, PlatformInfo_t &cfg, LoRaD
   struct timeval now;
   gettimeofday(&now, NULL);
 
-  //uint32_t tmst = (uint32_t)(now.tv_sec * 1000000 + now.tv_usec);
+  uint32_t tmst = (uint32_t)(now.tv_sec * 1000000 + now.tv_usec);
 
   // unix epoch in seconds ts to GPS timestamp in millis
-  uint64_t tmst = std::round( (unix2gps(now.tv_sec) * 1000.0) + (now.tv_usec / 1000) );
+  uint64_t tmms = std::round( (unix2gps(now.tv_sec) * 1000.0) + (now.tv_usec / 1000) );
 
   char compact_iso8610_time[28];
   strftime(compact_iso8610_time, sizeof compact_iso8610_time, "%FT%T", gmtime(&now.tv_sec));
@@ -218,8 +218,10 @@ void PublishLoRaProtocolPacket(NetworkConf_t &netCfg, PlatformInfo_t &cfg, LoRaD
   writer.StartObject();
   writer.String("time");
   writer.String(compact_iso8610_time);
+  writer.String("tmms")
+  writer.Uint64(tmms); 
   writer.String("tmst");
-  writer.Uint64(tmst); 
+  writer.Uint(tmst)
   writer.String("freq");
   writer.Double(cfg.lora_chip_settings.carrier_frequency_mhz);
   writer.String("chan");
