@@ -1,10 +1,10 @@
-LoRaPacketForwarder for Linux
-=============================
+LoRa UDP Packet Forwarder for Linux
+===================================
 
-Single channel LoRa UDP packet forwarder based
-on several libraries and existing projects.
+Single channel LoRa UDP packet forwarder based on several libraries and
+existing projects.
 
-Its goal is to provide simple LoRa forwarder for:
+The goal of the project is to provide simple LoRa forwarder for:
 
 * Linux - OrangePi, RaspberryPi, etc.
 * Very basic support for Semtech UDP protocol v2 - uplink and stats
@@ -13,7 +13,7 @@ Its goal is to provide simple LoRa forwarder for:
     * SX1278 - tested
     * Probably supports too:
         * SX127x
-        * RFMxx
+        * RFM9x
 * Simple JSON configuration file
 
 How to Use
@@ -39,7 +39,7 @@ The following steps have been tested on Arbian v5.73.
 * Compile this project with make
 
 
-## Running LoRaPacketForwarder
+## Running LoRa UDP Packet Forwarder
 
 * Create config.json by copying config.json.template
     * edit the pinout (execute gipo readall to check wiringPi pin numbers that need to be specified)
@@ -53,3 +53,11 @@ The following steps have been tested on Arbian v5.73.
         * The default one is eth0
         * Example: ./LoRaPktFwd wlan0
 
+### This project is influenced and contains code from:
+
+[https://github.com/jgromes/LoRaLib](https://github.com/jgromes/LoRaLib)
+[https://github.com/adafruit/single_chan_pkt_fwd](https://github.com/adafruit/single_chan_pkt_fwd)
+[https://github.com/orangepi-xunlong/wiringOP](https://github.com/orangepi-xunlong/wiringOP)
+[https://github.com/Lora-net/packet_forwarder](https://github.com/Lora-net/packet_forwarder)
+[https://www.gw-openscience.org/static/js/gpstimeutil.js](https://www.gw-openscience.org/static/js/gpstimeutil.js)
+[https://github.com/Tencent/rapidjson](https://github.com/Tencent/rapidjson)
