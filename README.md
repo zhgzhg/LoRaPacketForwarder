@@ -19,6 +19,10 @@ Its goal is to provide simple LoRa forwarder for:
 How to Use
 ==========
 
+## Clone the project
+`git clone --recurse-submodules https://github.com/zhgzhg/LoRaPacketForwarder.git`
+
+
 ### Orange PI: compile & install
 
 The following steps have been tested on Arbian v5.73.
