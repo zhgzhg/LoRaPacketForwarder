@@ -141,7 +141,7 @@ LoRa UDP Packet Forwarder relies on the following programs and libraries:
 ## How To Test
 
 Provided is a simple LoRa trasmitter example Arduino project called
-"Transmit.ino" in the current directory. Hook your ESP8266/Arduino/whatever 
+"Transmit" in the current directory. Hook your ESP8266/Arduino/whatever 
 board via SPI to SX1278 module, compile it, and it will start
 transmitting data. Using the default configuration inside
 "config.json.template" in terms of RF specs, the forwarder app should
