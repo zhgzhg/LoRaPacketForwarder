@@ -42,7 +42,8 @@ void SendUdp(NetworkConf_t &networkConf, Server_t &server, char *msg, int length
  
   SolveHostname(server.address.c_str(), server.port, &networkConf.si_other);
   
-  if (sendto(networkConf.socket, (char *)msg, length, 0 , (struct sockaddr *) &networkConf.si_other, sizeof(networkConf.si_other)) == -1) {
+  if (sendto(networkConf.socket, (char *)msg, length, 0,
+      (struct sockaddr *) &networkConf.si_other, sizeof(networkConf.si_other)) == -1) {
     Die("sendto()");
   }
 }
