@@ -1,10 +1,10 @@
 CC = g++
 LIBS = -lwiringPi
-CFLAGS = -g3 -std=c++14 -Wall -DLINUX -ILoRaLib/modules/ -I./ -ILoRaLib/linux-workarounds/SPI/
+CFLAGS = -std=c++14 -Wall -DLINUX -ILoRaLib/src/modules/ -IILoRaLib/src/ -ILoRaLib/src/linux-workarounds/SPI/
 
 # Should be equivalent to your list of C files, if you don't build selectively
-SRC = $(wildcard LoRaLib/linux-workarounds/SPI/*.cpp) $(wildcard LoRaLib/linux-workarounds/*.cpp) \
-      $(wildcard LoRaLib/protocols/*.cpp) $(wildcard LoRaLib/modules/*.cpp) \
+SRC = $(wildcard LoRaLib/src/linux-workarounds/SPI/*.cpp) $(wildcard LoRaLib/src/linux-workarounds/*.cpp) \
+      $(wildcard LoRaLib/src/protocols/*.cpp) $(wildcard LoRaLib/src/modules/*.cpp) \
       $(wildcard smtUdpPacketForwarder/base64/*.c) \
       $(wildcard smtUdpPacketForwarder/gpsTimestampUtils/*.cpp) \
       $(wildcard smtUdpPacketForwarder/*.cpp) $(wildcard *.cpp)
