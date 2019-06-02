@@ -4,7 +4,7 @@ LoRa UDP Packet Forwarder for Linux
 Single channel LoRa UDP packet forwarder ideal for development or
 testing purposes. Can only receive LoRa data and upload it to one 1 more
 servers. 
-This project is ideal for DIY of one of the cheapest LoRa "gateway"s
+This project is ideal for DIY of one of the cheapest LoRa "gateways"
 consisting of a single-board computer and a $4 LoRa module.
 
 The goal of the project is to provide simple LoRa forwarder for:
@@ -103,7 +103,7 @@ For e.g.:
 The following steps have been tested on Arbian v5.73.
 
 * Compile wiringPi for Orange PI with `./build` command
-    * Optionally specify PLATFORM before to change the board config. ( for e.g. for Orange Pi PC: `PLATFORM=OrangePi_H3 ./build` ).
+    * Optionally specify the PLATFORM variable to change the board config. ( for e.g. for Orange Pi PC: `PLATFORM=OrangePi_H3 ./build` ).
     * execute `gpio readall` to see the board pinout scheme table
 * Compile this project with `make`
 
