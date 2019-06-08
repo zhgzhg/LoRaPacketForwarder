@@ -40,9 +40,9 @@ void setup() {
   Serial.print(F("Initializing ... "));
   // carrier frequency:           434.0 MHz
   // bandwidth:                   125.0 kHz
-  // spreading factor:            9
-  // coding rate:                 7
-  // sync word:                   0x12
+  // spreading factor:            7
+  // coding rate:                 4/5
+  // sync word:                   0x34
   // output power:                17 dBm
   // current limit:               100 mA
   // preamble length:             8 symbols
