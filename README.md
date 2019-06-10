@@ -121,12 +121,12 @@ The following steps have been tested on Arbian v5.73.
     * edit the rest parameters accordingly
 
 * To execute the application:
-    * `./LoRaPktFwd`
+    * `./LoRaPktFwrd`
 
 * To execute the application and also specify network interface used for ID generation
-    * ./LoRaPktFwd <interface_name>
+    * ./LoRaPktFwrd <interface_name>
         * The default one is eth0
-        * Example: `./LoRaPktFwd wlan0`
+        * Example: `./LoRaPktFwrd wlan0`
         
 
 ## Dependencies
