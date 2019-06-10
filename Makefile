@@ -13,4 +13,4 @@ all: $(SRC)
 	$(CC) -o LoRaPktFwrd $^ $(CFLAGS) $(LIBS)
 
 clean:
-	rm -f ./LoRaPktFwd
+	rm -f ./LoRaPktFwrd
