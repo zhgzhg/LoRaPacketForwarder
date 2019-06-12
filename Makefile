@@ -1,5 +1,5 @@
 CC = g++
-LIBS = -lwiringPi
+LIBS = -lwiringPi -lm -lpthread -lrt -lcrypt
 CFLAGS = -std=c++14 -Wall -DLINUX -ILoRaLib/src/ -ILoRaLib/src/modules/ -ILoRaLib/src/linux-workarounds/SPI/
 
 # Should be equivalent to your list of C files, if you don't build selectively
