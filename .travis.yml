@@ -1,6 +1,7 @@
 dist: xenial
+sudo: true
 script:
-  - cd wiringOp
+  - cd wiringOP
   - PLATFORM=OrangePi_H3 ./build
   - cd ..
   - make
