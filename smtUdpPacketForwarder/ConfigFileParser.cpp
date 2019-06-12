@@ -26,6 +26,12 @@ void PrintConfiguration(PlatformInfo_t &cfg)
 PlatformInfo_t LoadConfiguration(std::string configurationFile, const char identifier[129]) 
 {
   FILE* p_file = fopen(configurationFile.c_str(), "r");
+  if (p_file == nullptr)
+  {
+    printf("Cannot open configuration file %s\n", configurationFile.c_str());
+    exit(15);
+  }
+  
   char buffer[65536];
   rapidjson::FileReadStream fs(p_file, buffer, sizeof(buffer));
 
