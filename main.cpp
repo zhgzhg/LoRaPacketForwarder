@@ -1,5 +1,5 @@
 #ifndef LINUX
-	#define LINUX
+        #define LINUX
 #endif
 
 #include <cstdio>
@@ -23,13 +23,16 @@ bool receiveData(LoRaDataPkt_t &pkt, String &msg) {
     int state = lora->receive(byteArr, len);
   */
 
+  time_t timestamp{std::time(nullptr)};
+
   if (state == ERR_NONE) { // packet was successfully received
     ++loraPacketStats.recv_packets;
     ++loraPacketStats.recv_packets_crc_good;
-    
+
     // print data of the packet
-    
-    printf("\nReceived packet:\n");
+
+    printf("\nReceived packet (%.24s):\n",
+        std::asctime(std::localtime(&timestamp)));
     printf(" Data:\t\t\t%s\n", msg.c_str());
 
     // print RSSI (Received Signal Strength Indicator)
@@ -57,9 +60,10 @@ bool receiveData(LoRaDataPkt_t &pkt, String &msg) {
   }*/ else if (state == ERR_CRC_MISMATCH) {
     // packet was received, but is malformed
     ++loraPacketStats.recv_packets;
-    printf("Received packet CRC error - ignored!\n");
+    printf("Received packet CRC error - ignored (%.24s)!\n",
+        std::asctime(std::localtime(&timestamp)));
   }
-  
+
   return false;
 }
 
@@ -84,8 +88,8 @@ int main(int argc, char **argv) {
     )
   );
 
-  int8_t power = 17, currentLimit = 100, gain = 0;
-  
+  int8_t power = 17, currentLimit_ma = 100, gain = 0;
+
   uint16_t state = lora->begin(
     cfg.lora_chip_settings.carrier_frequency_mhz,
     cfg.lora_chip_settings.bandwidth_khz,
@@ -93,11 +97,11 @@ int main(int argc, char **argv) {
     cfg.lora_chip_settings.coding_rate,
     cfg.lora_chip_settings.sync_word,
     power,
-    currentLimit,
+    currentLimit_ma,
     cfg.lora_chip_settings.preamble_length,
     gain
   );
-  
+
   if (state == ERR_NONE) {
     printf("LoRa chip setup success!\n");
   } else {
@@ -107,7 +111,7 @@ int main(int argc, char **argv) {
 
   const uint16_t delayIntervalMs = 20;
   const uint32_t sendStatPktIntervalMs = 80000;
-  uint32_t accum = 0; 
+  uint32_t accum = 0;
 
   LoRaDataPkt_t loraDataPacket;
   String str;
@@ -130,5 +134,5 @@ int main(int argc, char **argv) {
 
     accum += delayIntervalMs;
   }
-  
+
 }
