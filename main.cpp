@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  const uint16_t delayIntervalMs = 20;
+  const uint16_t delayIntervalMs = 40;
   const uint32_t sendStatPktIntervalMs = 80000;
   uint32_t accum = 0;
 
