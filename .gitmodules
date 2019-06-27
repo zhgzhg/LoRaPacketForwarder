@@ -4,3 +4,6 @@
 [submodule "wiringOP"]
 	path = wiringOP
 	url = https://github.com/zhgzhg/wiringOP.git
+[submodule "WiringOP-Zero"]
+	path = WiringOP-Zero
+	url = https://github.com/zhgzhg/WiringOP-Zero.git

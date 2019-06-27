@@ -104,8 +104,8 @@ For e.g.:
 
 The following steps have been tested on Arbian v5.73.
 
-* Compile wiringPi for Orange PI with `./build` command
-    * Optionally specify the PLATFORM variable to change the board config. ( for e.g. for Orange Pi PC: `PLATFORM=OrangePi_H3 ./build` ).
+* Compile wiringPi for Orange PI **for the ZERO model use WiringOP-Zero library instead** with `./build` command
+    * Optionally specify the PLATFORM variable to change the board config **(not applicable for WiringOP-Zero)** . ( for e.g. for Orange Pi PC: `PLATFORM=OrangePi_H3 ./build` ).
     * execute `gpio readall` to see the board pinout scheme table
 * Compile this project with `make`
 
