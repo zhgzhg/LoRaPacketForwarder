@@ -3,5 +3,7 @@ sudo: true
 script:
   - cd wiringOP
   - PLATFORM=OrangePi_H3 ./build
+  - cd ../WiringOP-Zero
+  - ./build
   - cd ..
   - make
