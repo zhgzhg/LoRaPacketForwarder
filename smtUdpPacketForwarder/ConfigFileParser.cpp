@@ -7,8 +7,12 @@ void PrintConfiguration(PlatformInfo_t &cfg)
 
   printf("ID (EUI-64): %s\n\n", cfg.__identifier);
 
+  printf("SPI Settings:\n  SPI channel=%d\n  SPI clock speed=%d Hz\n\n", cfg.lora_chip_settings.spi_channel,
+    cfg.lora_chip_settings.spi_speed_hz);
+  
   printf("(WiringPI) Pins:\n  nss_cs=%d\n  dio0=%d\n  dio1=%d\n\n", cfg.lora_chip_settings.pin_nss_cs,
     cfg.lora_chip_settings.pin_dio0, cfg.lora_chip_settings.pin_dio1);
+
 
   printf("LoRa SX127x Chip:\n  Freq=%f MHz\n  BW=%f KHz\n  SF=%d\n  CR=4/%d\n  SyncWord=0x%x\n  PreambleLength=%d\n\n",
     cfg.lora_chip_settings.carrier_frequency_mhz,cfg.lora_chip_settings.bandwidth_khz,
@@ -39,6 +43,16 @@ PlatformInfo_t LoadConfiguration(std::string configurationFile, const char ident
   doc.ParseStream(fs);
 
   PlatformInfo_t result;
+
+  result.lora_chip_settings.spi_channel = (uint8_t) doc["spi_channel"].GetUint();
+  if (result.lora_chip_settings.spi_channel > 1) {
+    result.lora_chip_settings.spi_channel = 0;
+  }
+
+  result.lora_chip_settings.spi_speed_hz = doc["spi_speed_hz"].GetUint();
+  if (result.lora_chip_settings.spi_speed_hz == 0) {
+    result.lora_chip_settings.spi_speed_hz = 500000;
+  }
 
   result.lora_chip_settings.pin_nss_cs = doc["pin_nss_cs"].GetInt();
   result.lora_chip_settings.pin_dio0 = doc["pin_dio0"].GetInt();

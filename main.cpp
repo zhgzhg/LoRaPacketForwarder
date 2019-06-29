@@ -81,6 +81,10 @@ int main(int argc, char **argv) {
 
   PrintConfiguration(cfg);
 
+  SPISettings spiSettings{cfg.lora_chip_settings.spi_speed_hz, MSBFIRST,
+    SPI_MODE0, cfg.lora_chip_settings.spi_channel};
+  SPI.beginTransaction(spiSettings);
+
   lora = new SX1278(new LoRa(
       cfg.lora_chip_settings.pin_nss_cs,
       cfg.lora_chip_settings.pin_dio0,
@@ -106,6 +110,7 @@ int main(int argc, char **argv) {
     printf("LoRa chip setup success!\n");
   } else {
     printf("LoRa chip setup failed, code %d\n", state);
+    SPI.endTransaction();
     return 1;
   }
 
@@ -135,4 +140,5 @@ int main(int argc, char **argv) {
     accum += delayIntervalMs;
   }
 
+  SPI.endTransaction();
 }

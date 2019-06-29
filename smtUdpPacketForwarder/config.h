@@ -39,6 +39,9 @@ typedef enum CodingRate {
 } CodingRate_t;
 
 typedef struct LoRaChipSettings {
+  uint8_t spi_channel;
+  uint32_t spi_speed_hz;
+
   int pin_nss_cs;
   int pin_dio0;
   int pin_dio1;

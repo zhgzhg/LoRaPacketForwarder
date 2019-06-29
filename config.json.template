@@ -1,4 +1,7 @@
 {
+  "spi_speed_hz": 2000000,
+  "spi_channel": 0,
+
   "pin_nss_cs": 6,
   "pin_dio0": 9,
   "pin_dio1": 10,
