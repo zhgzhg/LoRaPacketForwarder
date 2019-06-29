@@ -4,11 +4,15 @@
 
 #include <cstdio>
 #include <ctime>
+#include <csignal>
 
 #include "smtUdpPacketForwarder/ConfigFileParser.h"
 #include "smtUdpPacketForwarder/UdpUtils.h"
 
 #include <LoRaLib.h>
+
+
+static volatile sig_atomic_t keepRunning = 1;
 
 static LoRaPacketTrafficStats_t loraPacketStats;
 static SX1278 *lora;
@@ -118,11 +122,21 @@ int main(int argc, char **argv) {
   const uint32_t sendStatPktIntervalMs = 80000;
   uint32_t accum = 0;
 
+  auto signalHandler = [](int sigNum) { keepRunning = 0; };
+
+  signal(SIGHUP, signalHandler);  // Process' terminal is closed, the
+                                  // user has logger out, etc.
+  signal(SIGINT, signalHandler);  // Interrupted process (Ctrl + c)
+  signal(SIGQUIT, signalHandler); // Quit request (via console Ctrl + \)
+  signal(SIGTERM, signalHandler); // Termination request
+  signal(SIGXFSZ, signalHandler); // Creation of a file so large that
+                                  // it's not allowed anymore to grow
+
   LoRaDataPkt_t loraDataPacket;
   String str;
 
-  while (true) {
-    if ((accum % sendStatPktIntervalMs) == 0) {
+  while (keepRunning) {
+    if (keepRunning && (accum % sendStatPktIntervalMs) == 0) {
       printf("Sending stat update to server(s)... ");
       PublishStatProtocolPacket(netCfg, cfg, loraPacketStats);
       ++loraPacketStats.forw_packets_crc_good;
@@ -130,15 +144,16 @@ int main(int argc, char **argv) {
       printf("done\n");
     }
 
-    if (receiveData(loraDataPacket, str)) {
+    if (keepRunning && receiveData(loraDataPacket, str)) {
       PublishLoRaProtocolPacket(netCfg, cfg, loraDataPacket);
       str.clear();
-    } else {
+    } else if (keepRunning) {
       delay(delayIntervalMs);
     }
 
     accum += delayIntervalMs;
   }
 
+  printf("\nShutting down...\n");
   SPI.endTransaction();
 }
