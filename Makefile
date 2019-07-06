@@ -10,7 +10,10 @@ SRC = $(wildcard LoRaLib/src/linux-workarounds/SPI/*.cpp) $(wildcard LoRaLib/src
       $(wildcard smtUdpPacketForwarder/*.cpp) $(wildcard *.cpp)
 
 all: $(SRC)
-	$(CC) -o LoRaPktFwrd $^ $(CFLAGS) $(LIBS)
+	$(CC) -o LoRaPktFwrd $^ $(CFLAGS) -O3 $(LIBS)
+
+debug: $(SRC)
+	$(CC)  -o LoRaPktFwrd $^ -g3 -DRADIOLIB_DEBUG $(CFLAGS) $(LIBS)
 
 clean:
 	rm -f ./LoRaPktFwrd
