@@ -45,6 +45,7 @@ typedef struct LoRaChipSettings {
   int pin_nss_cs;
   int pin_dio0;
   int pin_dio1;
+  int pin_rest; // negative value means not used
 
   SpreadingFactor_t spreading_factor;
   float carrier_frequency_mhz;

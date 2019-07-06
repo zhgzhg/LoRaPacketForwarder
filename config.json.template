@@ -5,6 +5,7 @@
   "pin_nss_cs": 6,
   "pin_dio0": 9,
   "pin_dio1": 10,
+  "pin_rest": -1,
 
   "spreading_factor": 7,
   "carrier_frequency_mhz": 434.0,

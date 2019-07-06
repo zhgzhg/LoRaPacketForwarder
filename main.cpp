@@ -71,6 +71,30 @@ bool receiveData(LoRaDataPkt_t &pkt, String &msg) {
   return false;
 }
 
+uint16_t restartLoRaChip(PlatformInfo_t &cfg) {
+
+  if (cfg.lora_chip_settings.pin_rest > -1) {
+    digitalWrite(cfg.lora_chip_settings.pin_rest, 0);
+    delay(2);
+    digitalWrite(cfg.lora_chip_settings.pin_rest, 1);
+    delay(12);
+  }
+
+  int8_t power = 17, currentLimit_ma = 100, gain = 0;
+
+  return lora->begin(
+    cfg.lora_chip_settings.carrier_frequency_mhz,
+    cfg.lora_chip_settings.bandwidth_khz,
+    cfg.lora_chip_settings.spreading_factor,
+    cfg.lora_chip_settings.coding_rate,
+    cfg.lora_chip_settings.sync_word,
+    power,
+    currentLimit_ma,
+    cfg.lora_chip_settings.preamble_length,
+    gain
+  );
+}
+
 int main(int argc, char **argv) {
   char networkIfaceName[64] = "eth0";
   char gatewayId[25];
@@ -96,27 +120,21 @@ int main(int argc, char **argv) {
     )
   );
 
-  int8_t power = 17, currentLimit_ma = 100, gain = 0;
+  uint16_t state = ERR_NONE + 1;
 
-  uint16_t state = lora->begin(
-    cfg.lora_chip_settings.carrier_frequency_mhz,
-    cfg.lora_chip_settings.bandwidth_khz,
-    cfg.lora_chip_settings.spreading_factor,
-    cfg.lora_chip_settings.coding_rate,
-    cfg.lora_chip_settings.sync_word,
-    power,
-    currentLimit_ma,
-    cfg.lora_chip_settings.preamble_length,
-    gain
-  );
+  for (uint8_t c = 0; state != ERR_NONE && c < 200; ++c) {
+    state = restartLoRaChip(cfg);
 
-  if (state == ERR_NONE) {
-    printf("LoRa chip setup success!\n");
-  } else {
-    printf("LoRa chip setup failed, code %d\n", state);
+    if (state == ERR_NONE) printf("LoRa chip setup success!\n");
+    else printf("LoRa chip setup failed, code %d\n", state);
+  }
+
+  if (state != ERR_NONE) {
+    printf("Giving up due to failing LoRa chip setup!\nExiting!\n");
     SPI.endTransaction();
     return 1;
   }
+
 
   auto signalHandler = [](int sigNum) { keepRunning = 0; };
 
@@ -130,13 +148,16 @@ int main(int argc, char **argv) {
 
   const uint16_t delayIntervalMs = 50;
   const uint32_t sendStatPktIntervalMs = 80000;
-  uint32_t accum = 0;
+  const uint32_t loraChipRestIntervalMs = 80000;
+
+  uint32_t accumPktStats = 0;
+  uint32_t accumRestStats = delayIntervalMs;
 
   LoRaDataPkt_t loraDataPacket;
   String str;
 
   while (keepRunning) {
-    if (keepRunning && (accum % sendStatPktIntervalMs) == 0) {
+    if (keepRunning && (accumPktStats % sendStatPktIntervalMs) == 0) {
       printf("Sending stat update to server(s)... ");
       PublishStatProtocolPacket(netCfg, cfg, loraPacketStats);
       ++loraPacketStats.forw_packets_crc_good;
@@ -148,10 +169,22 @@ int main(int argc, char **argv) {
       PublishLoRaProtocolPacket(netCfg, cfg, loraDataPacket);
       str.clear();
     } else if (keepRunning) {
-      delay(delayIntervalMs);
+
+      if (cfg.lora_chip_settings.pin_rest > -1 && (accumRestStats % loraChipRestIntervalMs) == 0) {
+        do {
+          state = restartLoRaChip(cfg);
+          printf("Regular LoRa chip reset done - code %d, %s success\n", state,
+              (state == ERR_NONE ? "with" : "WITHOUT"));
+          delay(delayIntervalMs);
+        } while (state != ERR_NONE);
+      } else {
+        delay(delayIntervalMs);
+      }
+
     }
 
-    accum += delayIntervalMs;
+    accumPktStats += delayIntervalMs;
+    accumRestStats += delayIntervalMs;
   }
 
   printf("\nShutting down...\n");

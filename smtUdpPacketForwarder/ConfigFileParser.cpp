@@ -10,8 +10,8 @@ void PrintConfiguration(PlatformInfo_t &cfg)
   printf("SPI Settings:\n  SPI channel=%d\n  SPI clock speed=%d Hz\n\n", cfg.lora_chip_settings.spi_channel,
     cfg.lora_chip_settings.spi_speed_hz);
   
-  printf("(WiringPI) Pins:\n  nss_cs=%d\n  dio0=%d\n  dio1=%d\n\n", cfg.lora_chip_settings.pin_nss_cs,
-    cfg.lora_chip_settings.pin_dio0, cfg.lora_chip_settings.pin_dio1);
+  printf("(WiringPI) Pins:\n  nss_cs=%d\n  dio0=%d\n  dio1=%d\n  rest=%d\n\n", cfg.lora_chip_settings.pin_nss_cs,
+    cfg.lora_chip_settings.pin_dio0, cfg.lora_chip_settings.pin_dio1, cfg.lora_chip_settings.pin_rest);
 
 
   printf("LoRa SX127x Chip:\n  Freq=%f MHz\n  BW=%f KHz\n  SF=%d\n  CR=4/%d\n  SyncWord=0x%x\n  PreambleLength=%d\n\n",
@@ -57,6 +57,7 @@ PlatformInfo_t LoadConfiguration(std::string configurationFile, const char ident
   result.lora_chip_settings.pin_nss_cs = doc["pin_nss_cs"].GetInt();
   result.lora_chip_settings.pin_dio0 = doc["pin_dio0"].GetInt();
   result.lora_chip_settings.pin_dio1 = doc["pin_dio1"].GetInt();
+  result.lora_chip_settings.pin_rest = doc["pin_rest"].GetInt();
 
   int sf = doc["spreading_factor"].GetInt();
   if (sf < SpreadingFactor_t::SF_MIN || sf > SpreadingFactor_t::SF_MAX) {
