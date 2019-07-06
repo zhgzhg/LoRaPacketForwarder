@@ -7,3 +7,4 @@ script:
   - ./build
   - cd ..
   - make
+  - make clean debug
