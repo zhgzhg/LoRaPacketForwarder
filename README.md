@@ -89,7 +89,7 @@ For e.g.:
           |         SLCK |===== Pin #23 [OrangePiH3 Physical] / [[a.k.a WiringPi pin ## 14]]
           |          NSS |===== Pin #12 [OrangePiH3 Physical] / [a.k.a WiringPi pin ## 6]
           |         DIO0 |===== Pin #16 [OrangePiH3 Physical] / [a.k.a WiringPi pin ## 9]
-          |         REST |
+          |         REST |===== optional, connect it to VCC if it isn't used  
           |          GND |
            --------------
 
@@ -121,6 +121,7 @@ The following steps have been tested on Arbian v5.73, but its recommended to use
 
 * Create config.json by copying config.json.template
     * edit the pinout (execute `gpio readall` to check wiringPi pin numbers that need to be specified)
+    * note that pin_rest is optional. If if is not used you should leave it to -1 and also connect it to 3.3V
     * edit the rest parameters accordingly
 
 * To execute the application:
