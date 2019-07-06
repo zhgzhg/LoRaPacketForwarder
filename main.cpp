@@ -118,10 +118,6 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  const uint16_t delayIntervalMs = 40;
-  const uint32_t sendStatPktIntervalMs = 80000;
-  uint32_t accum = 0;
-
   auto signalHandler = [](int sigNum) { keepRunning = 0; };
 
   signal(SIGHUP, signalHandler);  // Process' terminal is closed, the
@@ -131,6 +127,10 @@ int main(int argc, char **argv) {
   signal(SIGTERM, signalHandler); // Termination request
   signal(SIGXFSZ, signalHandler); // Creation of a file so large that
                                   // it's not allowed anymore to grow
+
+  const uint16_t delayIntervalMs = 50;
+  const uint32_t sendStatPktIntervalMs = 80000;
+  uint32_t accum = 0;
 
   LoRaDataPkt_t loraDataPacket;
   String str;
