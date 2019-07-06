@@ -102,7 +102,7 @@ For e.g.:
 
 ### Orange PI: compile & install
 
-The following steps have been tested on Arbian v5.73.
+The following steps have been tested on Arbian v5.73, but its recommended to use its **latest** version.
 
 * Compile wiringPi for Orange PI **//for the ZERO model use WiringOP-Zero library instead//** with `./build` command
     * Optionally specify the PLATFORM variable to change the board config **(not applicable for WiringOP-Zero)** . ( for e.g. for Orange Pi PC: `PLATFORM=OrangePi_H3 ./build` ).
