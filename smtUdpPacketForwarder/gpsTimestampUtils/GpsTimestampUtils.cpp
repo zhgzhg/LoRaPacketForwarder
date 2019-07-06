@@ -13,7 +13,7 @@ static const unsigned long long GPS_LEAPS[] = { 46828800, 78364801, 109900802,
 
 // Test to see if a GPS second is a leap second
 bool isLeap(unsigned long long gpsTime) {
-  for (unsigned char i = 0; i < sizeof(GPS_LEAPS); ++i) {
+  for (unsigned char i = 0; i < sizeof(GPS_LEAPS) / sizeof(GPS_LEAPS[0]); ++i) {
     if (GPS_LEAPS[i] == gpsTime) return true;
   }
   return false;
@@ -25,13 +25,13 @@ unsigned char countLeaps(unsigned long long gpsTime, bool accumLeaps) {
   unsigned char nleaps = 0;
 
   if (accumLeaps) {
-    for (unsigned char i = 0; i < sizeof(GPS_LEAPS); ++i) {
+    for (unsigned char i = 0; i < sizeof(GPS_LEAPS) / sizeof(GPS_LEAPS[0]); ++i) {
  	 if (gpsTime + i >= GPS_LEAPS[i]) {
  	   nleaps += 1;
  	 }
     }
   } else {
-    for (unsigned char i = 0; i < sizeof(GPS_LEAPS); ++i) {
+    for (unsigned char i = 0; i < sizeof(GPS_LEAPS) / sizeof(GPS_LEAPS[0]); ++i) {
  	 if (gpsTime >= GPS_LEAPS[i]) {
  	   nleaps += 1;
  	 }
