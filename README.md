@@ -33,11 +33,12 @@ Ethernet...) the following pins on your device have to be allocated:
     * MISO
     * MOSI
     * CLK
-* 3 GPIO pins for connecting to LoRa's module:
+* 3 or 4 GPIO pins for connecting to LoRa's module:
     * CS (a.k.a NSS)
     * DIO 0
     * DIO 1
-* power pins - 1 for VCC (usually 3.3V) and 1 for GND
+    * REST - **optional**
+* power pins - 2 pins for VCC (usually 3.3V) and 1 for GND
 
 Please refer to command `gpio readall` (also check the next sections) to
 obtain more information for your particular board. Look into the WiringPi
