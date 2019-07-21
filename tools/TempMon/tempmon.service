@@ -1,0 +1,15 @@
+[Unit]
+Description=Mini Temperature Monitor
+
+[Service]
+ExecStart=/usr/bin/TempMon /etc/tempmon/config.json
+ExecReload=/bin/kill -HUP $MAINPID
+User=root
+KillMode=process
+Restart=on-failure
+RestartPreventExitStatus=255
+Type=simple
+
+[Install]
+WantedBy=multi-user.target
+Alias=tempmon.service
