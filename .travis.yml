@@ -11,4 +11,5 @@ script:
   - cd tools/TempMon
   - make debug
   - make clean all
+  - cp config.json.template config.json
   - sudo make install
