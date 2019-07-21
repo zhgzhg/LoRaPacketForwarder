@@ -24,11 +24,13 @@ How to Compile
 How to Install as a System Service
 ---------------------------------
 
+Create your config.json file in the current directory. Then execute:
+
 `sudo make install`
 
-To start the service: `sudo service tempmon start`
+To start the service execute: `sudo service tempmon start`
 
-To enable the service at system startup: `sudo systemctl enable tempmon.service`
+To enable the service at system's startup: `sudo systemctl enable tempmon.service`
 
 How to Uninstall the System Service
 -----------------------------------
