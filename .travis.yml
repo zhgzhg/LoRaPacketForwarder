@@ -11,4 +11,4 @@ script:
   - cd tools/TempMon
   - make debug
   - make clean all
-  - make install
+  - sudo make install
