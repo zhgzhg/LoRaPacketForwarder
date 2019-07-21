@@ -19,5 +19,13 @@ install:
 	cp -f ./config.json.template /etc/tempmon
 	cp -f ./config.json /etc/tempmon
 	cp -f ./TempMon /usr/bin
-	cp -f tempmon.service /etc/systemd/system
+	cp -f tempmon.service /lib/systemd/system
 	systemctl daemon-reload
+
+uninstall:
+	systemctl stop tempmon.service
+	systemctl disable tempmon.service
+	rm -f /lib/systemd/system/tempmon.service
+	systemctl daemon-reload
+	rm -fr /etc/tempmon
+	rm -f /usr/bin/TempMon

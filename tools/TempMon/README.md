@@ -30,6 +30,10 @@ To start the service: `sudo service tempmon start`
 
 To enable the service at system startup: `sudo systemctl enable tempmon.service`
 
+How to Uninstall the System Service
+-----------------------------------
+
+`sudo make -i uninstall`
 
 
 Sample Applications
