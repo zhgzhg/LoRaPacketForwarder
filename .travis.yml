@@ -8,3 +8,6 @@ script:
   - cd ..
   - make
   - make clean debug
+  - cd tools/TempMon
+  - make
+  - make install
