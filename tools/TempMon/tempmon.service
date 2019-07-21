@@ -1,5 +1,6 @@
 [Unit]
 Description=Mini Temperature Monitor
+After=basic.target paths.target
 
 [Service]
 ExecStart=/usr/bin/TempMon /etc/tempmon/config.json
