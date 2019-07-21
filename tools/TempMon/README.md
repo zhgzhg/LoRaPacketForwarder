@@ -27,7 +27,8 @@ How to Install as a System Service
 `sudo make install`
 
 To start the service: `sudo service tempmon start`
-To enable the service at system startup `sudo systemctl enable tempmon.service`
+
+To enable the service at system startup: `sudo systemctl enable tempmon.service`
 
 
 
