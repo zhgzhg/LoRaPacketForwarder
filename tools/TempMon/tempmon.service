@@ -3,7 +3,6 @@ Description=Mini Temperature Monitor
 
 [Service]
 ExecStart=/usr/bin/TempMon /etc/tempmon/config.json
-ExecReload=/bin/kill -HUP $MAINPID
 User=root
 KillMode=process
 Restart=on-failure
