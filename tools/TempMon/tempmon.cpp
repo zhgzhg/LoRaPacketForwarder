@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
 	wiringPiSetup();
 
 	for (GpioPin& p : pin_outputs)
-	{ pinMode(OUTPUT, p.wpi_pin_number); }
+	{ pinMode(p.wpi_pin_number, OUTPUT); }
 
 	auto signal_handler = [](int sig_num) { keep_running = 0; };
 
@@ -151,6 +151,7 @@ int main(int argc, char* argv[])
 
 			if (TEMPR_COMP_OPS.at(p.condition)(temp_degC, p.condition_temp_degC)) {
 				int outp_val = static_cast<int>(p.output_value);
+				pinMode(p.wpi_pin_number, OUTPUT);
 				digitalWrite(p.wpi_pin_number, outp_val);
 				std::cout << '[' << std::time(nullptr) << "] "
 					<< temp_degC << ' ' << p.condition << ' '
