@@ -1,7 +1,6 @@
 /**
- * A tiny temperature monitor program.
- * In responce to a certain temperature level output GPIO pins
- * can be set or cleared.
+ * A tiny temperature monitor program. In responce to a certain numeric
+ * (temperature) level the output GPIO pins can be set or cleared.
  */
 
 #include <iostream>
@@ -103,7 +102,8 @@ int main(int argc, char* argv[])
 
 	if (pin_outputs.size() == 0)
 	{
-		std::cerr << "No conditions supplied in tempmon.json!" << std::endl;
+		std::cerr << "No conditions supplied in '"
+			<< config_file_path << "' !" << std::endl;
 		return 2;
 	}
 
@@ -124,7 +124,6 @@ int main(int argc, char* argv[])
 
 	do
 	{
-
 		if (keep_running != 1)
 		{ break; }
 
