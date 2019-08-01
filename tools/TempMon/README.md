@@ -9,7 +9,8 @@ obtain them).
 During initialisation all of the specified pins will be set in OUTPUT mode,
 having their state cleared (low/false/0).
 
-The temperature is read from a file in millidegrees C resolution.
+The temperature is read from a file in millidegrees C resolution as an
+integer value, and later gets converted to a floating point one in degrees.
 
 For configuration example refer to the configuration template file
 'config.json.template'. Then create a copy of it called 'config.json' with your
