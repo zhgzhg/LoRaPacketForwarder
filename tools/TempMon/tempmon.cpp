@@ -1,5 +1,5 @@
 /**
- * A tiny temperature monitor program. In responce to a certain numeric
+ * A tiny temperature monitor program. In response to a certain numeric
  * (temperature) level the output GPIO pins can be set or cleared.
  */
 
