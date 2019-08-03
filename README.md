@@ -103,7 +103,8 @@ For e.g.:
 
 ### Orange PI: compile & install
 
-The following steps have been tested on Arbian v5.73, but its recommended to use its **latest** version.
+The following steps have been tested on Arbian v5.90. However it is recommended
+to use its **latest** version.
 
 * Compile wiringPi for Orange PI **//for the ZERO model use WiringOP-Zero library instead//** with `./build` command
     * Optionally specify the PLATFORM variable to change the board config **(not applicable for WiringOP-Zero)** . ( for e.g. for Orange Pi PC: `PLATFORM=OrangePi_H3 ./build` ).
@@ -120,8 +121,8 @@ The following steps have been tested on Arbian v5.73, but its recommended to use
 
 ## Running LoRa UDP Packet Forwarder
 
-* Create config.json by copying config.json.template
-    * edit the ic_model field to specify the LoRa chip model. Use one of the following supported values below:
+* Create config.json by copying config.json.template:
+    * Edit the ic_model field to specify the LoRa chip model. Use one of the following supported values below:
         * SX1272
         * SX1273
         * SX1276
@@ -130,9 +131,9 @@ The following steps have been tested on Arbian v5.73, but its recommended to use
         * RFM95
         * RFM96
         * RFM97
-    * edit the pinout (execute `gpio readall` to check wiringPi pin numbers that need to be specified)
-    * note that pin_rest is optional. If if is not used you should leave it to -1 and also connect it to 3.3V
-    * edit the rest parameters accordingly
+    * Edit the pinout (execute `gpio readall` to check wiringPi pin numbers that need to be specified). Please
+**note** that ***pin_rest*** is *optional*. If it isn't used you should leave it to -1 and also connect it to 3.3V;
+    * Edit the rest parameters accordingly.
 
 * To execute the application:
     * `./LoRaPktFwrd`
