@@ -1,4 +1,6 @@
 {
+  "ic_model": "SX1278",
+
   "spi_speed_hz": 2000000,
   "spi_channel": 0,
 

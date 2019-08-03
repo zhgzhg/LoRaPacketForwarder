@@ -7,14 +7,17 @@ void PrintConfiguration(PlatformInfo_t &cfg)
 
   printf("ID (EUI-64): %s\n\n", cfg.__identifier);
 
+  printf("Target LoRa Chip Model: %s\n\n", cfg.lora_chip_settings.ic_model.c_str());
+
   printf("SPI Settings:\n  SPI channel=%d\n  SPI clock speed=%d Hz\n\n", cfg.lora_chip_settings.spi_channel,
     cfg.lora_chip_settings.spi_speed_hz);
-  
+
   printf("(WiringPI) Pins:\n  nss_cs=%d\n  dio0=%d\n  dio1=%d\n  rest=%d\n\n", cfg.lora_chip_settings.pin_nss_cs,
     cfg.lora_chip_settings.pin_dio0, cfg.lora_chip_settings.pin_dio1, cfg.lora_chip_settings.pin_rest);
 
 
-  printf("LoRa SX127x Chip:\n  Freq=%f MHz\n  BW=%f KHz\n  SF=%d\n  CR=4/%d\n  SyncWord=0x%x\n  PreambleLength=%d\n\n",
+  printf("LoRa %s Chip:\n  Freq=%f MHz\n  BW=%f KHz\n  SF=%d\n  CR=4/%d\n  SyncWord=0x%x\n  PreambleLength=%d\n\n",
+    cfg.lora_chip_settings.ic_model.c_str(),
     cfg.lora_chip_settings.carrier_frequency_mhz,cfg.lora_chip_settings.bandwidth_khz,
     cfg.lora_chip_settings.spreading_factor, cfg.lora_chip_settings.coding_rate,
     cfg.lora_chip_settings.sync_word, cfg.lora_chip_settings.preamble_length);
@@ -35,7 +38,7 @@ PlatformInfo_t LoadConfiguration(std::string configurationFile, const char ident
     printf("Cannot open configuration file %s\n", configurationFile.c_str());
     exit(15);
   }
-  
+
   char buffer[65536];
   rapidjson::FileReadStream fs(p_file, buffer, sizeof(buffer));
 
@@ -43,6 +46,8 @@ PlatformInfo_t LoadConfiguration(std::string configurationFile, const char ident
   doc.ParseStream(fs);
 
   PlatformInfo_t result;
+
+  result.lora_chip_settings.ic_model = std::string(doc["ic_model"].GetString());
 
   result.lora_chip_settings.spi_channel = (uint8_t) doc["spi_channel"].GetUint();
   if (result.lora_chip_settings.spi_channel > 1) {
@@ -81,7 +86,7 @@ PlatformInfo_t LoadConfiguration(std::string configurationFile, const char ident
   result.longtitude = (float) doc["longtitude"].GetDouble();
   result.altitude_meters = doc["altitude_meters"].GetInt();
 
-  
+
   memset(result.platform_definition, 0, sizeof(result.platform_definition));
   strcpy(result.platform_definition, std::string(doc["platform_definition"].GetString()).substr(0, sizeof(PlatformInfo_t::platform_definition) - 1).c_str());
 
@@ -108,5 +113,5 @@ PlatformInfo_t LoadConfiguration(std::string configurationFile, const char ident
     strncpy(result.__identifier, identifier, sizeof(result.__identifier) - 1);
   }
 
-  return result; 
+  return result;
 }

@@ -5,6 +5,9 @@
 #include <cstdio>
 #include <ctime>
 #include <csignal>
+#include <functional>
+#include <map>
+#include <string>
 
 #include "smtUdpPacketForwarder/ConfigFileParser.h"
 #include "smtUdpPacketForwarder/UdpUtils.h"
@@ -15,7 +18,7 @@
 static volatile sig_atomic_t keepRunning = 1;
 
 static LoRaPacketTrafficStats_t loraPacketStats;
-static SX1278 *lora;
+static SX127x *lora;
 
 bool receiveData(LoRaDataPkt_t &pkt, String &msg) {
   int state = lora->receive(msg);
@@ -95,6 +98,28 @@ uint16_t restartLoRaChip(PlatformInfo_t &cfg) {
   );
 }
 
+SX127x* instantiateLoRa(LoRaChipSettings_t& lora_chip_settings) {
+  static const std::map<std::string, std::function<SX127x*(LoRa*)> > LORA_CHIPS {
+    { "SX1272", [](LoRa* lora_module_settings) { return new SX1272(lora_module_settings); } },
+    { "SX1273", [](LoRa* lora_module_settings) { return new SX1273(lora_module_settings); } },
+    { "SX1276", [](LoRa* lora_module_settings) { return new SX1276(lora_module_settings); } },
+    { "SX1277", [](LoRa* lora_module_settings) { return new SX1277(lora_module_settings); } },
+    { "SX1278", [](LoRa* lora_module_settings) { return new SX1278(lora_module_settings); } },
+    { "SX1279", [](LoRa* lora_module_settings) { return new SX1279(lora_module_settings); } },
+    { "RFM95", [](LoRa* lora_module_settings) { return new RFM95(lora_module_settings); } },
+    { "RFM96", [](LoRa* lora_module_settings) { return new RFM96(lora_module_settings); } },
+    { "RFM97", [](LoRa* lora_module_settings) { return new RFM97(lora_module_settings); } }
+  };
+
+  LoRa* module_settings = new LoRa(
+    lora_chip_settings.pin_nss_cs,
+    lora_chip_settings.pin_dio0,
+    lora_chip_settings.pin_dio1
+  );
+
+  return LORA_CHIPS.at(lora_chip_settings.ic_model)(module_settings);
+}
+
 int main(int argc, char **argv) {
   char networkIfaceName[64] = "eth0";
   char gatewayId[25];
@@ -113,12 +138,7 @@ int main(int argc, char **argv) {
     SPI_MODE0, cfg.lora_chip_settings.spi_channel};
   SPI.beginTransaction(spiSettings);
 
-  lora = new SX1278(new LoRa(
-      cfg.lora_chip_settings.pin_nss_cs,
-      cfg.lora_chip_settings.pin_dio0,
-      cfg.lora_chip_settings.pin_dio1
-    )
-  );
+  lora = instantiateLoRa(cfg.lora_chip_settings);
 
   uint16_t state = ERR_NONE + 1;
 

@@ -121,6 +121,15 @@ The following steps have been tested on Arbian v5.73, but its recommended to use
 ## Running LoRa UDP Packet Forwarder
 
 * Create config.json by copying config.json.template
+    * edit the ic_model field to specify the LoRa chip model. Use one of the following supported values below:
+        * SX1272
+        * SX1273
+        * SX1276
+        * SX1277
+        * SX1278
+        * RFM95
+        * RFM96
+        * RFM97
     * edit the pinout (execute `gpio readall` to check wiringPi pin numbers that need to be specified)
     * note that pin_rest is optional. If if is not used you should leave it to -1 and also connect it to 3.3V
     * edit the rest parameters accordingly
