@@ -131,6 +131,7 @@ to use its **latest** version.
         * RFM95
         * RFM96
         * RFM97
+        * RFM98
     * Edit the pinout (execute `gpio readall` to check wiringPi pin numbers that need to be specified). Please
 **note** that ***pin_rest*** is *optional*. If it isn't used you should leave it to -1 and also connect it to 3.3V;
     * Edit the rest parameters accordingly.
@@ -178,3 +179,7 @@ immediately pick data from the transmitter.
 [https://www.gw-openscience.org/static/js/gpstimeutil.js](https://www.gw-openscience.org/static/js/gpstimeutil.js)
 
 [https://github.com/Tencent/rapidjson](https://github.com/Tencent/rapidjson)
+
+### Parameter details on the supported LoRa IC's:
+[https://github.com/jgromes/LoRaLib/wiki/Supported-LoRa-modules](https://github.com/jgromes/LoRaLib/wiki/Supported-LoRa-modules)
+
