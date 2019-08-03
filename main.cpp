@@ -108,7 +108,8 @@ SX127x* instantiateLoRa(LoRaChipSettings_t& lora_chip_settings) {
     { "SX1279", [](LoRa* lora_module_settings) { return new SX1279(lora_module_settings); } },
     { "RFM95", [](LoRa* lora_module_settings) { return new RFM95(lora_module_settings); } },
     { "RFM96", [](LoRa* lora_module_settings) { return new RFM96(lora_module_settings); } },
-    { "RFM97", [](LoRa* lora_module_settings) { return new RFM97(lora_module_settings); } }
+    { "RFM97", [](LoRa* lora_module_settings) { return new RFM97(lora_module_settings); } },
+    { "RFM98", [](LoRa* lora_module_settings) { return new RFM96(lora_module_settings); } } // LIKE RFM96
   };
 
   LoRa* module_settings = new LoRa(
