@@ -20,6 +20,36 @@ static volatile sig_atomic_t keepRunning = 1;
 static LoRaPacketTrafficStats_t loraPacketStats;
 static SX127x *lora;
 
+
+void hexPrint(uint8_t data[], int length) {
+  if (length < 1) {
+    printf("\n");
+    return;
+  }
+
+  for (int i = 0; i < length; i += 16) {
+    printf("  %04x  ", (i * 16));
+    int j = i;
+    for (int limit = i + 16 ; j < limit && j < length; ++j) {
+      if (j % 8 == 0) printf("  ");
+      printf("%02x ", data[j]);
+    }
+
+    for (int k = j; k % 16 != 0; ++k) {
+      if (k % 8 == 0) printf("  ");
+      printf("   ");
+    }
+
+    printf("  ");
+
+    for (int k = i; k < j; ++k)
+      printf("%c", isprint(data[k]) ? data[k] : '.');
+
+    printf("\n");
+  }
+  printf("\n");
+}
+
 bool receiveData(LoRaDataPkt_t &pkt, uint8_t msg[]) {
 
   int state = lora->receive(msg, SX127X_MAX_PACKET_LENGTH);
@@ -32,28 +62,28 @@ bool receiveData(LoRaDataPkt_t &pkt, uint8_t msg[]) {
     ++loraPacketStats.recv_packets;
     ++loraPacketStats.recv_packets_crc_good;
 
-    // print data of the packet
 
     printf("\nReceived packet (%.24s):\n",
         std::asctime(std::localtime(&timestamp)));
-    printf(" Data (%d bytes):\t\t\t%.*s\n", msg_length, msg_length, msg);
-
-    // print RSSI (Received Signal Strength Indicator)
-    // of the last received packet
+ 
+    // Received Signal Strength Indicator of the last received packet
     printf(" RSSI:\t\t\t%d dBm\n", lora->getRSSI());
 
-    // print SNR (Signal-to-Noise Ratio)
-    // of the last received packet
+    // SNR (Signal-to-Noise Ratio) of the last received packet
     printf(" SNR:\t\t\t%f dB\n", lora->getSNR());
 
-    // print frequency error
-    // of the last received packet
+    // frequency error of the last received packet
     printf(" Frequency error:\t%f Hz\n", lora->getFrequencyError());
+
+    printf(" Data:\t\t\t%d bytes\n\n", msg_length);
+    hexPrint(msg, msg_length);
+
 
     pkt.RSSI = lora->getRSSI();
     pkt.SNR = lora->getSNR();
     pkt.msg = static_cast<const uint8_t*> (msg);
     pkt.msg_sz = msg_length;
+
     return true;
 
   } /*else if (state == ERR_RX_TIMEOUT) {
