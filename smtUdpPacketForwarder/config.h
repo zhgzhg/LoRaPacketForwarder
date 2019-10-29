@@ -58,11 +58,18 @@ typedef struct LoRaChipSettings {
 
 } LoRaChipSettings_t;
 
-typedef struct Server
-{
+typedef struct NetworkConf {
+  struct sockaddr_in si_other;
+  struct ifreq ifr;
+  int socket;
+  struct timeval recv_timeout;
+} NetworkConf_t;
+
+typedef struct Server {
     std::string address;
     uint16_t port;
-    // bool enabled;
+    uint32_t receive_timeout_ms;
+    NetworkConf_t network_cfg;
 } Server_t;
 
 typedef struct PlatformInfo {
@@ -80,12 +87,6 @@ typedef struct PlatformInfo {
 
   std::vector<Server_t> servers;
 } PlatformInfo_t;
-
-typedef struct NetworkConf {
-  struct sockaddr_in si_other;
-  struct ifreq ifr;
-  int socket;
-} NetworkConf_t;
 
 typedef struct LoRaPacketTrafficStats {
   uint32_t recv_packets;

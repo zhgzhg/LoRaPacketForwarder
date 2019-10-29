@@ -102,7 +102,7 @@ PlatformInfo_t LoadConfiguration(std::string configurationFile, const char ident
     Server_t serv;
     serv.address = serversArr[i]["address"].GetString();
     serv.port = (uint16_t) serversArr[i]["port"].GetUint();
-    // serv.enabled = true;
+    serv.receive_timeout_ms = serversArr[i]["recv_timeout_ms"].GetUint();
     result.servers.push_back(serv);
   }
 

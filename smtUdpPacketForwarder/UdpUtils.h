@@ -9,6 +9,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <functional>
 
 #include <arpa/inet.h>
 #include <net/if.h>
@@ -43,9 +44,10 @@
 
 void Die(const char *s);
 void SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_sin);
-void SendUdp(NetworkConf_t &networkConf, Server_t &server, char *msg, int length);
-NetworkConf_t PrepareNetworking(const char* networkInterfaceName, char gatewayId[25]);
-void PublishStatProtocolPacket(NetworkConf_t &netCfg, PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pktStats);
-void PublishLoRaProtocolPacket(NetworkConf_t &netCfg, PlatformInfo_t &cfg, LoRaDataPkt_t &loraPacket);
+bool SendUdp(Server_t &server, char *msg, int length,
+             std::function<bool(char*, int, char*, int)> &validator);
+NetworkConf_t PrepareNetworking(const char* networkInterfaceName, suseconds_t dataRecvTimeout, char gatewayId[25]);
+void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pktStats);
+void PublishLoRaProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPacket);
 
 #endif

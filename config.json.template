@@ -28,11 +28,13 @@
     {
       "address": "router.eu.thethings.network",
       "port": 1700,
+      "recv_timeout_ms": 25,
       "enabled": true
     },
     {
       "address": "router.us.thethings.network",
       "port": 1700,
+      "recv_timeout_ms": 25,
       "enabled": false
     }
   ]

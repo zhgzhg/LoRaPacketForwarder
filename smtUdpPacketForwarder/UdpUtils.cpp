@@ -6,6 +6,15 @@ void Die(const char *s)
   exit(1);
 }
 
+static std::function<bool(char*, int, char*, int)> IsValidAck = [](char* origMsg, int origMsgSz,
+		char* respMsg, int respMsgSz) {
+  if (origMsg != nullptr && origMsgSz > 4 && respMsg != nullptr && respMsgSz >= 4) {
+    return origMsg[0] == respMsg[0] && origMsg[1] == respMsg[1]
+	    && origMsg[2] == respMsg[2] && respMsg[3] == PKT_PUSH_ACK;
+  }
+  return false;
+};
+
 void SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_sin)
 {
   struct addrinfo hints;
@@ -22,8 +31,8 @@ void SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_
   // Resolve the domain name into a list of addresses
   int error = getaddrinfo(p_hostname, service, &hints, &p_result);
   if (error != 0) {
-      fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(error));
-      exit(EXIT_FAILURE);
+    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(error));
+    exit(EXIT_FAILURE);
   }
 
   // Loop over all returned results
@@ -36,25 +45,51 @@ void SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_
   freeaddrinfo(p_result);
 }
 
-void SendUdp(NetworkConf_t &networkConf, Server_t &server, char *msg, int length)
+bool SendUdp(Server_t &server, char *msg, int length,
+             std::function<bool(char*, int, char*, int)> &validator)
 {
+  NetworkConf_t &networkConf = server.network_cfg;
+
   networkConf.si_other.sin_port = htons(server.port);
  
   SolveHostname(server.address.c_str(), server.port, &networkConf.si_other);
   
-  if (sendto(networkConf.socket, (char *)msg, length, 0,
-      (struct sockaddr *) &networkConf.si_other, sizeof(networkConf.si_other)) == -1) {
-    Die("sendto()");
+  if (sendto(networkConf.socket, msg, length, 0, (struct sockaddr *) &networkConf.si_other,
+      sizeof(networkConf.si_other)) == -1) {
+    return false;
   }
+
+  char resp[32];
+
+  for (int i = 0; i < 2; ++i) {
+    int j = recv(networkConf.socket, resp, sizeof(resp), 0);
+
+    if (j == -1) {
+      if (errno == EAGAIN) continue; // timeout
+      else return false; // server connection error
+    } 
+  }
+
+  return validator(msg, length, resp, sizeof(resp));
 }
 
 
-NetworkConf_t PrepareNetworking(const char* networkInterfaceName, char gatewayId[25])
+NetworkConf_t PrepareNetworking(const char* networkInterfaceName, suseconds_t dataRecvTimeout,
+	                        char gatewayId[25])
 {
   NetworkConf_t result;
 
   if ((result.socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
     Die("socket");
+  }
+
+  result.recv_timeout.tv_sec = 0;
+  result.recv_timeout.tv_usec = dataRecvTimeout;
+
+
+  if (setsockopt(result.socket, SOL_SOCKET, SO_RCVTIMEO,
+		  (void *) &result.recv_timeout, sizeof(result.recv_timeout)) != 0) {
+    Die(strerror(errno));
   }
 
   memset((char *) &result.si_other, 0, sizeof(result.si_other));
@@ -77,7 +112,7 @@ NetworkConf_t PrepareNetworking(const char* networkInterfaceName, char gatewayId
   return result;  
 }
 
-void PublishStatProtocolPacket(NetworkConf_t &netCfg, PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pktStats)
+void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pktStats)
 {
   // see https://github.com/Lora-net/packet_forwarder/blob/master/PROTOCOL.TXT
 
@@ -89,15 +124,6 @@ void PublishStatProtocolPacket(NetworkConf_t &netCfg, PlatformInfo_t &cfg, LoRaP
   /* pre-fill the data buffer with fixed fields */
   status_report[0] = PROTOCOL_VERSION;
   status_report[3] = PKT_PUSH_DATA;
-
-  status_report[4] = (unsigned char)netCfg.ifr.ifr_hwaddr.sa_data[0];
-  status_report[5] = (unsigned char)netCfg.ifr.ifr_hwaddr.sa_data[1];
-  status_report[6] = (unsigned char)netCfg.ifr.ifr_hwaddr.sa_data[2];
-  status_report[7] = 0xFF;
-  status_report[8] = 0xFF;
-  status_report[9] = (unsigned char)netCfg.ifr.ifr_hwaddr.sa_data[3];
-  status_report[10] = (unsigned char)netCfg.ifr.ifr_hwaddr.sa_data[4];
-  status_report[11] = (unsigned char)netCfg.ifr.ifr_hwaddr.sa_data[5];
 
   /* start composing datagram with the header */
   uint8_t token_h = (uint8_t)rand(); /* random token */
@@ -155,11 +181,22 @@ void PublishStatProtocolPacket(NetworkConf_t &netCfg, PlatformInfo_t &cfg, LoRaP
   memcpy(status_report + 12, json.c_str(), json.size());
 
   for (Server_t &serv : cfg.servers) {
-    SendUdp(netCfg, serv, status_report, stat_index + json.size());
+    status_report[4] = (unsigned char)serv.network_cfg.ifr.ifr_hwaddr.sa_data[0];
+    status_report[5] = (unsigned char)serv.network_cfg.ifr.ifr_hwaddr.sa_data[1];
+    status_report[6] = (unsigned char)serv.network_cfg.ifr.ifr_hwaddr.sa_data[2];
+    status_report[7] = 0xFF;
+    status_report[8] = 0xFF;
+    status_report[9] = (unsigned char)serv.network_cfg.ifr.ifr_hwaddr.sa_data[3];
+    status_report[10] = (unsigned char)serv.network_cfg.ifr.ifr_hwaddr.sa_data[4];
+    status_report[11] = (unsigned char)serv.network_cfg.ifr.ifr_hwaddr.sa_data[5];
+
+    if (!SendUdp(serv, status_report, stat_index + json.size(), IsValidAck)) {
+      printf("No send ACK received from %s\n", serv.address.c_str());
+    }
   }
 }
 
-void PublishLoRaProtocolPacket(NetworkConf_t &netCfg, PlatformInfo_t &cfg, LoRaDataPkt_t &loraPacket)
+void PublishLoRaProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPacket)
 {
   // see https://github.com/Lora-net/packet_forwarder/blob/master/PROTOCOL.TXT
 
@@ -179,15 +216,6 @@ void PublishLoRaProtocolPacket(NetworkConf_t &netCfg, PlatformInfo_t &cfg, LoRaD
   //net_mac_l = htonl((uint32_t)(0xFFFFFFFF &  lgwm  ));
   //*(uint32_t *)(buff_up + 4) = net_mac_h; 
   //*(uint32_t *)(buff_up + 8) = net_mac_l;
-
-  buff_up[4] = (uint8_t)netCfg.ifr.ifr_hwaddr.sa_data[0];
-  buff_up[5] = (uint8_t)netCfg.ifr.ifr_hwaddr.sa_data[1];
-  buff_up[6] = (uint8_t)netCfg.ifr.ifr_hwaddr.sa_data[2]; 
-  buff_up[7] = 0xFF;
-  buff_up[8] = 0xFF;
-  buff_up[9] = (uint8_t)netCfg.ifr.ifr_hwaddr.sa_data[3];
-  buff_up[10] = (uint8_t)netCfg.ifr.ifr_hwaddr.sa_data[4];
-  buff_up[11] = (uint8_t)netCfg.ifr.ifr_hwaddr.sa_data[5];
 
   /* start composing datagram with the header */
   uint8_t token_h = (uint8_t)rand(); /* random token */
@@ -267,6 +295,17 @@ void PublishLoRaProtocolPacket(NetworkConf_t &netCfg, PlatformInfo_t &cfg, LoRaD
 
   memcpy(buff_up + 12, json.c_str(), json.size());
   for (Server_t &serv : cfg.servers) {
-    SendUdp(netCfg, serv, buff_up, buff_index + json.size());
+    buff_up[4] = (uint8_t)serv.network_cfg.ifr.ifr_hwaddr.sa_data[0];
+    buff_up[5] = (uint8_t)serv.network_cfg.ifr.ifr_hwaddr.sa_data[1];
+    buff_up[6] = (uint8_t)serv.network_cfg.ifr.ifr_hwaddr.sa_data[2]; 
+    buff_up[7] = 0xFF;
+    buff_up[8] = 0xFF;
+    buff_up[9] = (uint8_t)serv.network_cfg.ifr.ifr_hwaddr.sa_data[3];
+    buff_up[10] = (uint8_t)serv.network_cfg.ifr.ifr_hwaddr.sa_data[4];
+    buff_up[11] = (uint8_t)serv.network_cfg.ifr.ifr_hwaddr.sa_data[5];
+
+    if (!SendUdp(serv, buff_up, buff_index + json.size(), IsValidAck)) {
+      printf("No send ACK received from %s\n", serv.address.c_str());
+    }
   }
 }

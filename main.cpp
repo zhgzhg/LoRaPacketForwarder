@@ -156,8 +156,12 @@ int main(int argc, char **argv) {
     strcpy(networkIfaceName, (const char*) argv[1]);
   }
 
-  NetworkConf_t netCfg = PrepareNetworking(networkIfaceName, gatewayId);
   PlatformInfo_t cfg = LoadConfiguration("./config.json", gatewayId);
+
+  for (auto &serv : cfg.servers) {
+    serv.network_cfg =
+       PrepareNetworking(networkIfaceName, serv.receive_timeout_ms * 1000, gatewayId);
+  }
 
   PrintConfiguration(cfg);
 
@@ -206,14 +210,14 @@ int main(int argc, char **argv) {
   while (keepRunning) {
     if (keepRunning && (accumPktStats % sendStatPktIntervalMs) == 0) {
       printf("Sending stat update to server(s)... ");
-      PublishStatProtocolPacket(netCfg, cfg, loraPacketStats);
+      PublishStatProtocolPacket(cfg, loraPacketStats);
       ++loraPacketStats.forw_packets_crc_good;
       ++loraPacketStats.forw_packets;
       printf("done\n");
     }
 
     if (keepRunning && receiveData(loraDataPacket, msg)) {
-      PublishLoRaProtocolPacket(netCfg, cfg, loraDataPacket);
+      PublishLoRaProtocolPacket(cfg, loraDataPacket);
     } else if (keepRunning) {
 
       if (cfg.lora_chip_settings.pin_rest > -1 && (accumRestStats % loraChipRestIntervalMs) == 0) {
