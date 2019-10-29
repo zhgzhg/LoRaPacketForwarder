@@ -49,33 +49,33 @@ bool isUnixTimeleap(unsigned long long unixTime) {
 }
 
 // Convert Unix Time to GPS Time
-long double unix2gps(long double unixTime) {
+long double unix2gps(long double unixTime, bool handleLeapSeconds/* = false*/) {
   long double fpart, gpsTime, ipart;
 
   ipart = std::floor(unixTime);
   fpart = fmod(unixTime, 1);
   gpsTime = ipart - 315964800.0;
   
-  if (isUnixTimeleap((unsigned long long)std::ceil(unixTime))) {
+  if (handleLeapSeconds && isUnixTimeleap((unsigned long long)std::ceil(unixTime))) {
     fpart *= 2;
   }
 
-  return gpsTime + fpart + countLeaps(gpsTime, true);
+  return gpsTime + fpart + (handleLeapSeconds ? countLeaps(gpsTime, true) : 0);
 }
 
 // Convert GPS Time to Unix Time
-long double gps2unix(long double gpsTime) {
+long double gps2unix(long double gpsTime, bool handleLeapSeconds/* = false*/) {
   long double fpart, unixTime, ipart;
   unsigned long long ipartReal;
 
   fpart = fmod(gpsTime, 1);
   ipart = std::floor(gpsTime);
   ipartReal = (unsigned long long) ipart;
-  unixTime = ipart + 315964800 - countLeaps(ipartReal, false);
+  unixTime = ipart + 315964800 - (handleLeapSeconds ? countLeaps(ipartReal, false) : 0);
 
-  if (isLeap(ipartReal + 1)) {
+  if (handleLeapSeconds && isLeap(ipartReal + 1)) {
     unixTime = unixTime + fpart / 2;
-  } else if (isLeap(ipartReal)) {
+  } else if (handleLeapSeconds && isLeap(ipartReal)) {
     unixTime = unixTime + (fpart + 1) / 2;
   } else {
     unixTime = unixTime + fpart;
