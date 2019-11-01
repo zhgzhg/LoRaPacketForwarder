@@ -1,5 +1,8 @@
 #include "UdpUtils.h"
 
+static std::queue<send_attempts_data_len_data_tpl> uplink_data_queue;
+static std::timed_mutex g_uplink_data_queue_mutex;
+
 void Die(const char *s)
 {
   perror(s);
@@ -110,6 +113,35 @@ NetworkConf_t PrepareNetworking(const char* networkInterfaceName, suseconds_t da
   );
 
   return result;  
+}
+
+void EnqueuePacket(uint8_t *data, uint32_t data_len)
+{
+  if (data == nullptr) return;
+
+  std::unique_lock<std::timed_mutex> lock(g_uplink_data_queue_mutex,
+                  std::chrono::system_clock::now() + std::chrono::seconds(2));
+  if (!lock.owns_lock())
+  {
+    printf("Failed to obtain uplink queue lock! Giving up on that packet!");
+    return;
+  }
+
+  uplink_data_queue.push(std::make_tuple(0UL, data_len, std::unique_ptr<uint8_t>(data)));
+}
+
+void DequeuePacket(std::function<void(send_attempts_data_len_data_tpl&)> &consumer)
+{
+  std::unique_lock<std::timed_mutex> lock(g_uplink_data_queue_mutex,
+                  std::chrono::system_clock::now() + std::chrono::seconds(1));
+
+  if (!lock.owns_lock() || uplink_data_queue.empty()) return;
+  send_attempts_data_len_data_tpl &packet_tuple = uplink_data_queue.front();
+  uplink_data_queue.pop();
+
+  lock.unlock();
+
+  consumer(packet_tuple);
 }
 
 void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pktStats)

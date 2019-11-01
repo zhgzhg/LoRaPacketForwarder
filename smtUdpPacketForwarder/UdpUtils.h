@@ -6,10 +6,16 @@
 #include <cstdio>
 #include <cstring>
 #include <cmath>
+
 #include <iostream>
+#include <chrono>
 #include <string>
 #include <vector>
+#include <queue>
+#include <utility>
 #include <functional>
+#include <mutex>
+#include <memory>
 
 #include <arpa/inet.h>
 #include <net/if.h>
@@ -32,8 +38,8 @@
 #define PROTOCOL_VERSION  2
 #define PKT_PUSH_DATA 0
 #define PKT_PUSH_ACK  1
-#define PKT_PULL_DATA 2
 
+#define PKT_PULL_DATA 2
 #define PKT_PULL_RESP 3
 #define PKT_PULL_ACK  4
 
@@ -41,12 +47,19 @@
 
 #define BASE64_MAX_LENGTH 341
 
+typedef std::tuple<uint32_t, uint32_t, std::unique_ptr<uint8_t> > send_attempts_data_len_data_tpl;
+
 
 void Die(const char *s);
 void SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_sin);
 bool SendUdp(Server_t &server, char *msg, int length,
              std::function<bool(char*, int, char*, int)> &validator);
 NetworkConf_t PrepareNetworking(const char* networkInterfaceName, suseconds_t dataRecvTimeout, char gatewayId[25]);
+
+void EnqueuePacket(uint8_t *data, uint32_t data_len);
+void DequeuePacket(std::function<void(send_attempts_data_len_data_tpl&)> &consumer);
+
+
 void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pktStats);
 void PublishLoRaProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPacket);
 
