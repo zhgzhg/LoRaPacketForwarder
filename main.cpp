@@ -102,7 +102,7 @@ bool receiveData(LoRaDataPkt_t &pkt, uint8_t msg[]) { // {{{
         std::asctime(std::localtime(&timestamp)));
  
     // Received Signal Strength Indicator of the last received packet
-    printf(" RSSI:\t\t\t%d dBm\n", lora->getRSSI());
+    printf(" RSSI:\t\t\t%.1f dBm\n", lora->getRSSI());
 
     // SNR (Signal-to-Noise Ratio) of the last received packet
     printf(" SNR:\t\t\t%f dB\n", lora->getSNR());
