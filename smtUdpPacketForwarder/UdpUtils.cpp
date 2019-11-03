@@ -250,11 +250,8 @@ void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pk
     uint8_t *packet = new uint8_t[packet_sz];
     memcpy(packet, status_report, packet_sz);
     EnqueuePacket(packet, packet_sz, serv);
-
-//    if (!SendUdp(serv, status_report, stat_index + json.size(), IsValidAck)) {
-//      printf("No send ACK received from %s\n", serv.address.c_str());
-//    }
   }
+
 } // }}}
 
 void PublishLoRaProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPacket) // {{{
@@ -370,4 +367,5 @@ void PublishLoRaProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPacket) /
     memcpy(packet, buff_up, packet_sz);
     EnqueuePacket(packet, packet_sz, serv);
   }
+
 } // }}}
