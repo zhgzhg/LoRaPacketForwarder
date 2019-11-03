@@ -12,7 +12,6 @@
 #include <string>
 #include <vector>
 #include <queue>
-#include <utility>
 #include <functional>
 #include <mutex>
 #include <memory>
@@ -47,8 +46,31 @@
 
 #define BASE64_MAX_LENGTH 341
 
-typedef std::tuple<uint32_t, uint32_t, std::unique_ptr<uint8_t> > send_attempts_data_len_data_tpl;
 
+typedef struct PackagedDataToSend
+{
+  uint32_t curr_attempt;
+  uint32_t data_len;
+  std::unique_ptr<uint8_t> data;
+  Server_t destination;
+
+  PackagedDataToSend(uint32_t curr_attempt, uint32_t data_len, uint8_t *data_content, Server_t& destination)
+  {
+    this->curr_attempt = curr_attempt;
+    this->data_len = data_len;
+    this->data = std::unique_ptr<uint8_t>(data_content);
+    this->destination = destination; 
+  }
+
+  PackagedDataToSend(PackagedDataToSend &&origin)
+  {
+    curr_attempt = origin.curr_attempt;
+    data_len = origin.data_len;
+    data = std::move(origin.data);
+    destination = origin.destination;
+  }
+
+} PackagedDataToSend_t;
 
 void Die(const char *s);
 void SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_sin);
@@ -56,8 +78,9 @@ bool SendUdp(Server_t &server, char *msg, int length,
              std::function<bool(char*, int, char*, int)> &validator);
 NetworkConf_t PrepareNetworking(const char* networkInterfaceName, suseconds_t dataRecvTimeout, char gatewayId[25]);
 
-void EnqueuePacket(uint8_t *data, uint32_t data_len);
-void DequeuePacket(std::function<void(send_attempts_data_len_data_tpl&)> &consumer);
+void EnqueuePacket(uint8_t *data, uint32_t data_length, Server_t& dest);
+bool RequeuePacket(PackagedDataToSend_t &&packet, uint32_t maxAttempts);
+PackagedDataToSend_t DequeuePacket();
 
 
 void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pktStats);

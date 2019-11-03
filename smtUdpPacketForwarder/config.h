@@ -66,10 +66,10 @@ typedef struct NetworkConf {
 } NetworkConf_t;
 
 typedef struct Server {
-    std::string address;
-    uint16_t port;
-    uint32_t receive_timeout_ms;
-    NetworkConf_t network_cfg;
+  std::string address;
+  uint16_t port;
+  uint32_t receive_timeout_ms;
+  NetworkConf_t network_cfg;
 } Server_t;
 
 typedef struct PlatformInfo {

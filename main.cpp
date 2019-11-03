@@ -8,6 +8,7 @@
 #include <functional>
 #include <map>
 #include <string>
+#include <thread>
 
 #include "smtUdpPacketForwarder/ConfigFileParser.h"
 #include "smtUdpPacketForwarder/UdpUtils.h"
@@ -20,8 +21,42 @@ static volatile sig_atomic_t keepRunning = 1;
 static LoRaPacketTrafficStats_t loraPacketStats;
 static SX127x *lora;
 
+void uplinkPacketSenderWorker()
+{
+  static std::function<bool(char*, int, char*, int)> isValidAck =
+          [](char* origMsg, int origMsgSz, char* respMsg, int respMsgSz) {
+              if (origMsg != nullptr && origMsgSz > 4 && respMsg != nullptr && respMsgSz >= 4) {
+                return origMsg[0] == respMsg[0] && origMsg[1] == respMsg[1]
+	                 && origMsg[2] == respMsg[2] && respMsg[3] == PKT_PUSH_ACK;
+              }
+              return false;
+  };
 
-void hexPrint(uint8_t data[], int length) {
+
+  bool iterateOnceMore = false;
+  do
+  {
+    PackagedDataToSend_t packet{DequeuePacket()};
+    iterateOnceMore = (packet.data_len > 0);
+    if (iterateOnceMore)
+    {
+      bool result = SendUdp(packet.destination,
+          reinterpret_cast<char*>(packet.data.get()), packet.data_len, isValidAck);
+
+      if (!result)
+      {
+	printf("No uplink ACK received from %s\n", packet.destination.address.c_str());
+        if (RequeuePacket(std::move(packet), 4))
+          printf("Requeued the uplink packed.\n");
+      }
+    }
+
+    if (keepRunning) std::this_thread::sleep_for(std::chrono::milliseconds(150));
+  } while (keepRunning || iterateOnceMore);
+
+}
+
+void hexPrint(uint8_t data[], int length) { // {{{
   if (length < 1) {
     printf("\n");
     return;
@@ -48,9 +83,9 @@ void hexPrint(uint8_t data[], int length) {
     printf("\n");
   }
   printf("\n");
-}
+} // }}}
 
-bool receiveData(LoRaDataPkt_t &pkt, uint8_t msg[]) {
+bool receiveData(LoRaDataPkt_t &pkt, uint8_t msg[]) { // {{{
 
   int state = lora->receive(msg, SX127X_MAX_PACKET_LENGTH);
 
@@ -86,11 +121,7 @@ bool receiveData(LoRaDataPkt_t &pkt, uint8_t msg[]) {
 
     return true;
 
-  } /*else if (state == ERR_RX_TIMEOUT) {
-    // timeout occurred while waiting for a packet
-    //printf("timeout!\n");
-    return false;
-  }*/ else if (state == ERR_CRC_MISMATCH) {
+  } else if (state == ERR_CRC_MISMATCH) {
     // packet was received, but is malformed
     ++loraPacketStats.recv_packets;
     printf("Received packet CRC error - ignored (%.24s)!\n",
@@ -98,9 +129,9 @@ bool receiveData(LoRaDataPkt_t &pkt, uint8_t msg[]) {
   }
 
   return false;
-}
+} // }}}
 
-uint16_t restartLoRaChip(PlatformInfo_t &cfg) {
+uint16_t restartLoRaChip(PlatformInfo_t &cfg) { // {{{
 
   if (cfg.lora_chip_settings.pin_rest > -1) {
     digitalWrite(cfg.lora_chip_settings.pin_rest, 0);
@@ -122,7 +153,7 @@ uint16_t restartLoRaChip(PlatformInfo_t &cfg) {
     cfg.lora_chip_settings.preamble_length,
     gain
   );
-}
+} // }}}
 
 SX127x* instantiateLoRa(LoRaChipSettings_t& lora_chip_settings) {
   static const std::map<std::string, std::function<SX127x*(LoRa*)> > LORA_CHIPS {
@@ -207,6 +238,8 @@ int main(int argc, char **argv) {
   LoRaDataPkt_t loraDataPacket;
   uint8_t msg[SX127X_MAX_PACKET_LENGTH];
 
+  std::thread uplinkSender{uplinkPacketSenderWorker};
+
   while (keepRunning) {
     if (keepRunning && (accumPktStats % sendStatPktIntervalMs) == 0) {
       printf("Sending stat update to server(s)... ");
@@ -239,4 +272,5 @@ int main(int argc, char **argv) {
 
   printf("\nShutting down...\n");
   SPI.endTransaction();
+  uplinkSender.join();
 }

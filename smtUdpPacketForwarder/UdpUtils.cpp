@@ -1,24 +1,18 @@
 #include "UdpUtils.h"
 
-static std::queue<send_attempts_data_len_data_tpl> uplink_data_queue;
+static std::queue<PackagedDataToSend> uplink_data_queue;
 static std::timed_mutex g_uplink_data_queue_mutex;
+static Server_t NO_SERVER;
+PackagedDataToSend_t NO_PACKAGED_DATA{0UL, 0UL, {}, NO_SERVER};
 
-void Die(const char *s)
+void Die(const char *s) // {{{
 {
   perror(s);
   exit(1);
-}
+} // }}}
 
-static std::function<bool(char*, int, char*, int)> IsValidAck = [](char* origMsg, int origMsgSz,
-		char* respMsg, int respMsgSz) {
-  if (origMsg != nullptr && origMsgSz > 4 && respMsg != nullptr && respMsgSz >= 4) {
-    return origMsg[0] == respMsg[0] && origMsg[1] == respMsg[1]
-	    && origMsg[2] == respMsg[2] && respMsg[3] == PKT_PUSH_ACK;
-  }
-  return false;
-};
 
-void SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_sin)
+void SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_sin) // {{{
 {
   struct addrinfo hints;
   memset(&hints, 0, sizeof(struct addrinfo));
@@ -46,10 +40,10 @@ void SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_
   }
 
   freeaddrinfo(p_result);
-}
+} // }}}
 
 bool SendUdp(Server_t &server, char *msg, int length,
-             std::function<bool(char*, int, char*, int)> &validator)
+             std::function<bool(char*, int, char*, int)> &validator) // {{{
 {
   NetworkConf_t &networkConf = server.network_cfg;
 
@@ -74,11 +68,11 @@ bool SendUdp(Server_t &server, char *msg, int length,
   }
 
   return validator(msg, length, resp, sizeof(resp));
-}
+} // }}}
 
 
 NetworkConf_t PrepareNetworking(const char* networkInterfaceName, suseconds_t dataRecvTimeout,
-	                        char gatewayId[25])
+	                        char gatewayId[25]) // {{{
 {
   NetworkConf_t result;
 
@@ -113,9 +107,28 @@ NetworkConf_t PrepareNetworking(const char* networkInterfaceName, suseconds_t da
   );
 
   return result;  
+} // }}}
+
+bool RequeuePacket(PackagedDataToSend_t &&packet, uint32_t maxAttempts)
+{
+  if (packet.curr_attempt >= maxAttempts)
+  { return false; }
+
+  std::unique_lock<std::timed_mutex> lock(g_uplink_data_queue_mutex,
+                  std::chrono::system_clock::now() + std::chrono::seconds(2));
+  if (!lock.owns_lock())
+  {
+    printf("Failed to obtain uplink queue lock! Giving up on requeuing the packet!");
+    return false;
+  }
+
+  packet.curr_attempt++;
+  uplink_data_queue.push(std::move(packet));
+
+  return true;
 }
 
-void EnqueuePacket(uint8_t *data, uint32_t data_len)
+void EnqueuePacket(uint8_t *data, uint32_t data_length, Server_t& dest) // {{{
 {
   if (data == nullptr) return;
 
@@ -127,28 +140,31 @@ void EnqueuePacket(uint8_t *data, uint32_t data_len)
     return;
   }
 
-  uplink_data_queue.push(std::make_tuple(0UL, data_len, std::unique_ptr<uint8_t>(data)));
-}
+  PackagedDataToSend_t packaged_data{ 0UL, data_length, data, dest };
 
-void DequeuePacket(std::function<void(send_attempts_data_len_data_tpl&)> &consumer)
+  uplink_data_queue.push(std::move(packaged_data));
+} // }}}
+
+PackagedDataToSend_t DequeuePacket() // {{{
 {
   std::unique_lock<std::timed_mutex> lock(g_uplink_data_queue_mutex,
                   std::chrono::system_clock::now() + std::chrono::seconds(1));
 
-  if (!lock.owns_lock() || uplink_data_queue.empty()) return;
-  send_attempts_data_len_data_tpl &packet_tuple = uplink_data_queue.front();
+  if (!lock.owns_lock() || uplink_data_queue.empty()) return std::move(NO_PACKAGED_DATA);
+
+  PackagedDataToSend_t result = std::move(uplink_data_queue.front());
   uplink_data_queue.pop();
 
   lock.unlock();
 
-  consumer(packet_tuple);
-}
+  return result;
+} // }}}
 
-void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pktStats)
+void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pktStats) // {{{
 {
   // see https://github.com/Lora-net/packet_forwarder/blob/master/PROTOCOL.TXT
 
-  static char status_report[STATUS_MSG_SIZE]; /* status report as a JSON object */
+  char status_report[STATUS_MSG_SIZE]; /* status report as a JSON object */
   char stat_timestamp[24];
 
   int stat_index = 0;
@@ -222,13 +238,18 @@ void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pk
     status_report[10] = (unsigned char)serv.network_cfg.ifr.ifr_hwaddr.sa_data[4];
     status_report[11] = (unsigned char)serv.network_cfg.ifr.ifr_hwaddr.sa_data[5];
 
-    if (!SendUdp(serv, status_report, stat_index + json.size(), IsValidAck)) {
-      printf("No send ACK received from %s\n", serv.address.c_str());
-    }
-  }
-}
+    size_t packet_sz = stat_index + json.size();
+    uint8_t *packet = new uint8_t[packet_sz];
+    memcpy(packet, status_report, packet_sz);
+    EnqueuePacket(packet, packet_sz, serv);
 
-void PublishLoRaProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPacket)
+//    if (!SendUdp(serv, status_report, stat_index + json.size(), IsValidAck)) {
+//      printf("No send ACK received from %s\n", serv.address.c_str());
+//    }
+  }
+} // }}}
+
+void PublishLoRaProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPacket) // {{{
 {
   // see https://github.com/Lora-net/packet_forwarder/blob/master/PROTOCOL.TXT
 
@@ -336,8 +357,9 @@ void PublishLoRaProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPacket)
     buff_up[10] = (uint8_t)serv.network_cfg.ifr.ifr_hwaddr.sa_data[4];
     buff_up[11] = (uint8_t)serv.network_cfg.ifr.ifr_hwaddr.sa_data[5];
 
-    if (!SendUdp(serv, buff_up, buff_index + json.size(), IsValidAck)) {
-      printf("No send ACK received from %s\n", serv.address.c_str());
-    }
+    size_t packet_sz = buff_index + json.size();
+    uint8_t *packet = new uint8_t[packet_sz];
+    memcpy(packet, buff_up, packet_sz);
+    EnqueuePacket(packet, packet_sz, serv);
   }
-}
+} // }}}
