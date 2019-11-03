@@ -81,10 +81,10 @@ NetworkConf_t PrepareNetworking(const char* networkInterfaceName, suseconds_t da
   }
 
   time_t seconds = 0;
-  if (dataRecvTimeout > 1000)
+  if (dataRecvTimeout > 999999)
   { 
-    seconds = dataRecvTimeout / 1000;
-    dataRecvTimeout -= (seconds * 1000);
+    seconds = dataRecvTimeout / 1000000;
+    dataRecvTimeout -= (seconds * 1000000);
   }
 
 
