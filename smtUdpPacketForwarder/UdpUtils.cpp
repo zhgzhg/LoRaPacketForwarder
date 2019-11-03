@@ -80,7 +80,15 @@ NetworkConf_t PrepareNetworking(const char* networkInterfaceName, suseconds_t da
     Die("socket");
   }
 
-  result.recv_timeout.tv_sec = 0;
+  time_t seconds = 0;
+  if (dataRecvTimeout > 1000)
+  { 
+    seconds = dataRecvTimeout / 1000;
+    dataRecvTimeout -= (seconds * 1000);
+  }
+
+
+  result.recv_timeout.tv_sec = seconds;
   result.recv_timeout.tv_usec = dataRecvTimeout;
 
 
