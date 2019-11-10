@@ -19,6 +19,7 @@ install:
 	cp -f ./config.json.template /etc/tempmon
 	cp -f ./config.json /etc/tempmon
 	cp -f ./TempMon /usr/bin
+	chmod a+x /usr/bin/TempMon
 	cp -f tempmon.service /lib/systemd/system
 	systemctl daemon-reload
 
