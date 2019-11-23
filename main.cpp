@@ -21,13 +21,13 @@ static volatile sig_atomic_t keepRunning = 1;
 static LoRaPacketTrafficStats_t loraPacketStats;
 static SX127x *lora;
 
-void uplinkPacketSenderWorker()
-{
+void uplinkPacketSenderWorker() { // {{{
+
   static std::function<bool(char*, int, char*, int)> isValidAck =
           [](char* origMsg, int origMsgSz, char* respMsg, int respMsgSz) {
               if (origMsg != nullptr && origMsgSz > 4 && respMsg != nullptr && respMsgSz >= 4) {
-                return origMsg[0] == respMsg[0] && origMsg[1] == respMsg[1]
-	                 && origMsg[2] == respMsg[2] && respMsg[3] == PKT_PUSH_ACK;
+                return origMsg[0] == respMsg[0] && origMsg[1] == respMsg[1] &&
+                         origMsg[2] == respMsg[2] && respMsg[3] == PKT_PUSH_ACK;
               }
               return false;
   };
@@ -47,16 +47,17 @@ void uplinkPacketSenderWorker()
       {
 	printf("No uplink ACK received from %s\n", packet.destination.address.c_str());
         if (RequeuePacket(std::move(packet), 4))
-          printf("Requeued the uplink packed.\n");
+	{ printf("Requeued the uplink packed.\n"); }
       }
     }
 
     if (keepRunning) std::this_thread::sleep_for(std::chrono::milliseconds(150));
   } while (keepRunning || iterateOnceMore);
 
-}
+} // }}}
 
 void hexPrint(uint8_t data[], int length) { // {{{
+
   if (length < 1) {
     printf("\n");
     return;
@@ -85,9 +86,27 @@ void hexPrint(uint8_t data[], int length) { // {{{
   printf("\n");
 } // }}}
 
-bool receiveData(LoRaDataPkt_t &pkt, uint8_t msg[]) { // {{{
+enum class LoRaRecvStat { NODATA, DATARECV, DATARECVFAIL };
 
-  int state = lora->receive(msg, SX127X_MAX_PACKET_LENGTH);
+LoRaRecvStat receiveData(bool receiveOnAllChannels, LoRaDataPkt_t &pkt, uint8_t msg[]) { // {{{
+
+  int state = ERR_RX_TIMEOUT;
+  bool insistDataReceiveFailure = false;
+
+  if (!receiveOnAllChannels) {
+    state = lora->receive(msg, SX127X_MAX_PACKET_LENGTH);
+  } else {
+    for (unsigned i = SpreadingFactor_t::SF7; i <= SpreadingFactor_t::SF_MAX; ++i) {
+      lora->setSpreadingFactor(i);
+      state = lora->scanChannel();
+      if (state == PREAMBLE_DETECTED) /*&& lora->getRSSI() > -124.0) */{
+        state = lora->receive(msg, SX127X_MAX_PACKET_LENGTH);
+        insistDataReceiveFailure = (state != ERR_NONE);
+        printf("Got preamble at SF%d, RSSI %f!\n", i, lora->getRSSI());
+        break;
+      }
+    }
+  }
 
   time_t timestamp{std::time(nullptr)};
 
@@ -100,7 +119,7 @@ bool receiveData(LoRaDataPkt_t &pkt, uint8_t msg[]) { // {{{
 
     printf("\nReceived packet (%.24s):\n",
         std::asctime(std::localtime(&timestamp)));
- 
+
     // Received Signal Strength Indicator of the last received packet
     printf(" RSSI:\t\t\t%.1f dBm\n", lora->getRSSI());
 
@@ -119,16 +138,17 @@ bool receiveData(LoRaDataPkt_t &pkt, uint8_t msg[]) { // {{{
     pkt.msg = static_cast<const uint8_t*> (msg);
     pkt.msg_sz = msg_length;
 
-    return true;
+    return LoRaRecvStat::DATARECV;
 
   } else if (state == ERR_CRC_MISMATCH) {
     // packet was received, but is malformed
     ++loraPacketStats.recv_packets;
     printf("Received packet CRC error - ignored (%.24s)!\n",
         std::asctime(std::localtime(&timestamp)));
+    return LoRaRecvStat::DATARECVFAIL;
   }
 
-  return false;
+  return (insistDataReceiveFailure ? LoRaRecvStat::DATARECVFAIL : LoRaRecvStat::NODATA);
 } // }}}
 
 uint16_t restartLoRaChip(PlatformInfo_t &cfg) { // {{{
@@ -155,7 +175,8 @@ uint16_t restartLoRaChip(PlatformInfo_t &cfg) { // {{{
   );
 } // }}}
 
-SX127x* instantiateLoRa(LoRaChipSettings_t& lora_chip_settings) {
+SX127x* instantiateLoRa(LoRaChipSettings_t& lora_chip_settings) // {{{
+{
   static const std::map<std::string, std::function<SX127x*(LoRa*)> > LORA_CHIPS {
     { "SX1272", [](LoRa* lora_module_settings) { return new SX1272(lora_module_settings); } },
     { "SX1273", [](LoRa* lora_module_settings) { return new SX1273(lora_module_settings); } },
@@ -176,9 +197,10 @@ SX127x* instantiateLoRa(LoRaChipSettings_t& lora_chip_settings) {
   );
 
   return LORA_CHIPS.at(lora_chip_settings.ic_model)(module_settings);
-}
+} // }}}
 
 int main(int argc, char **argv) {
+
   char networkIfaceName[64] = "eth0";
   char gatewayId[25];
   memset(gatewayId, 0, sizeof(gatewayId));
@@ -187,13 +209,14 @@ int main(int argc, char **argv) {
     strcpy(networkIfaceName, (const char*) argv[1]);
   }
 
-  PlatformInfo_t cfg = LoadConfiguration("./config.json", gatewayId);
+  PlatformInfo_t cfg = LoadConfiguration("./config.json");
 
   for (auto &serv : cfg.servers) {
     serv.network_cfg =
        PrepareNetworking(networkIfaceName, serv.receive_timeout_ms * 1000, gatewayId);
   }
 
+  SetGatewayIdentifier(cfg, gatewayId);
   PrintConfiguration(cfg);
 
   SPISettings spiSettings{cfg.lora_chip_settings.spi_speed_hz, MSBFIRST,
@@ -228,12 +251,14 @@ int main(int argc, char **argv) {
   signal(SIGXFSZ, signalHandler); // Creation of a file so large that
                                   // it's not allowed anymore to grow
 
-  const uint16_t delayIntervalMs = 50;
-  const uint32_t sendStatPktIntervalMs = 80000;
-  const uint32_t loraChipRestIntervalMs = 80000;
+  bool receiveOnAllChannels = cfg.lora_chip_settings.all_spreading_factors;
 
-  uint32_t accumPktStats = 0;
-  uint32_t accumRestStats = delayIntervalMs;
+  const uint16_t delayIntervalMs = 20;
+  const uint32_t sendStatPktIntervalSeconds = 420;
+  const uint32_t loraChipRestIntervalSeconds = 300;
+
+  time_t nextStatUpdateTime = std::time(nullptr) - 1;
+  time_t nextChipRestTime = nextStatUpdateTime + 1 + loraChipRestIntervalSeconds;
 
   LoRaDataPkt_t loraDataPacket;
   uint8_t msg[SX127X_MAX_PACKET_LENGTH];
@@ -241,7 +266,10 @@ int main(int argc, char **argv) {
   std::thread uplinkSender{uplinkPacketSenderWorker};
 
   while (keepRunning) {
-    if (keepRunning && (accumPktStats % sendStatPktIntervalMs) == 0) {
+    time_t currTime{std::time(nullptr)};
+
+    if (keepRunning && currTime >= nextStatUpdateTime) {
+      nextStatUpdateTime = currTime + sendStatPktIntervalSeconds;
       printf("Sending stat update to server(s)... ");
       PublishStatProtocolPacket(cfg, loraPacketStats);
       ++loraPacketStats.forw_packets_crc_good;
@@ -249,25 +277,30 @@ int main(int argc, char **argv) {
       printf("done\n");
     }
 
-    if (keepRunning && receiveData(loraDataPacket, msg)) {
-      PublishLoRaProtocolPacket(cfg, loraDataPacket);
-    } else if (keepRunning) {
+    if (!keepRunning) break;
 
-      if (cfg.lora_chip_settings.pin_rest > -1 && (accumRestStats % loraChipRestIntervalMs) == 0) {
+    LoRaRecvStat lastRecvResult = receiveData(receiveOnAllChannels, loraDataPacket, msg);
+
+    if (lastRecvResult == LoRaRecvStat::DATARECV) {
+      PublishLoRaProtocolPacket(cfg, loraDataPacket);
+    } else if (keepRunning && lastRecvResult == LoRaRecvStat::NODATA) {
+
+      if (cfg.lora_chip_settings.pin_rest > -1 && currTime >= nextChipRestTime) {
+        nextChipRestTime = currTime + loraChipRestIntervalSeconds;
+
         do {
           state = restartLoRaChip(cfg);
           printf("Regular LoRa chip reset done - code %d, %s success\n", state,
               (state == ERR_NONE ? "with" : "WITHOUT"));
           delay(delayIntervalMs);
         } while (state != ERR_NONE);
+
       } else {
         delay(delayIntervalMs);
       }
 
     }
 
-    accumPktStats += delayIntervalMs;
-    accumRestStats += delayIntervalMs;
   }
 
   printf("\nShutting down...\n");

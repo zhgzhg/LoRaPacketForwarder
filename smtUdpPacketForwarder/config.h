@@ -18,6 +18,7 @@
 
 
 typedef enum SpreadingFactor {
+  SF_ALL = -1,
   SF_MIN = 6, 
   SF6 = SF_MIN,
   SF7 = 7,
@@ -49,6 +50,7 @@ typedef struct LoRaChipSettings {
   int pin_dio1;
   int pin_rest; // negative value means not used
 
+  bool all_spreading_factors;
   SpreadingFactor_t spreading_factor;
   float carrier_frequency_mhz;
   float bandwidth_khz;
