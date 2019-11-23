@@ -29,8 +29,14 @@ void PrintConfiguration(PlatformInfo_t &cfg)
     cfg.platform_email, cfg.platform_description);
 }
 
+void SetGatewayIdentifier(PlatformInfo_t &cfg, const char identifier[25])
+{
+  memset(cfg.__identifier, 0, sizeof(cfg.__identifier));
+  if (identifier)
+  { strncpy(cfg.__identifier, identifier, sizeof(cfg.__identifier) - 1); }
+}
 
-PlatformInfo_t LoadConfiguration(std::string configurationFile, const char identifier[129]) 
+PlatformInfo_t LoadConfiguration(std::string configurationFile)
 {
   FILE* p_file = fopen(configurationFile.c_str(), "r");
   if (p_file == nullptr)
@@ -66,6 +72,7 @@ PlatformInfo_t LoadConfiguration(std::string configurationFile, const char ident
 
   int sf = doc["spreading_factor"].GetInt();
   if (sf < SpreadingFactor_t::SF_MIN || sf > SpreadingFactor_t::SF_MAX) {
+    result.lora_chip_settings.all_spreading_factors = (sf == SpreadingFactor_t::SF_ALL);
     sf = SpreadingFactor_t::SF7;
   }
   result.lora_chip_settings.spreading_factor = static_cast<SpreadingFactor_t>(sf);
@@ -107,11 +114,6 @@ PlatformInfo_t LoadConfiguration(std::string configurationFile, const char ident
   }
 
   fclose(p_file);
-
-  memset(result.__identifier, 0, sizeof(result.__identifier));
-  if (identifier) {
-    strncpy(result.__identifier, identifier, sizeof(result.__identifier) - 1);
-  }
 
   return result;
 }
