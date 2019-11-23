@@ -45,9 +45,9 @@ void uplinkPacketSenderWorker() { // {{{
 
       if (!result)
       {
-	printf("No uplink ACK received from %s\n", packet.destination.address.c_str());
+        printf("No uplink ACK received from %s\n", packet.destination.address.c_str());
         if (RequeuePacket(std::move(packet), 4))
-	{ printf("Requeued the uplink packed.\n"); }
+        { printf("Requeued the uplink packed.\n"); }
       }
     }
 
