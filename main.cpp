@@ -154,10 +154,7 @@ LoRaRecvStat receiveData(bool receiveOnAllChannels, LoRaDataPkt_t &pkt, uint8_t 
 uint16_t restartLoRaChip(PlatformInfo_t &cfg) { // {{{
 
   if (cfg.lora_chip_settings.pin_rest > -1) {
-    digitalWrite(cfg.lora_chip_settings.pin_rest, 0);
-    delay(2);
-    digitalWrite(cfg.lora_chip_settings.pin_rest, 1);
-    delay(12);
+    lora->reset();
   }
 
   int8_t power = 17, currentLimit_ma = 100, gain = 0;
@@ -193,7 +190,8 @@ SX127x* instantiateLoRa(LoRaChipSettings_t& lora_chip_settings) // {{{
   LoRa* module_settings = new LoRa(
     lora_chip_settings.pin_nss_cs,
     lora_chip_settings.pin_dio0,
-    lora_chip_settings.pin_dio1
+    lora_chip_settings.pin_dio1,
+    (lora_chip_settings.pin_rest > -1 ? lora_chip_settings.pin_rest : RADIOLIB_NC)
   );
 
   return LORA_CHIPS.at(lora_chip_settings.ic_model)(module_settings);
