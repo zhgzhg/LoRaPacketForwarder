@@ -39,6 +39,7 @@ struct GpioPin
 	int wpi_pin_number;
 	bool output_value;
 	std::string condition;
+	bool active_on_terminate;
 	long double condition_temp_degC;
 	std::string temp_degC_source;
 };
@@ -58,8 +59,9 @@ std::vector<GpioPin> parse_config(std::ifstream& fs)
 		p.output_value = o["output_val"].GetBool();
 		p.condition = o["condition"].GetString();
 		p.condition_temp_degC = o["temperature_degC"].GetDouble();
+		p.active_on_terminate = o.HasMember("match_on_terminate") && o["match_on_terminate"].GetBool();
 		p.temp_degC_source = o["temperature_src"].GetString();
-		
+
 		result.push_back(p);
 	}
 
@@ -122,10 +124,12 @@ int main(int argc, char* argv[])
 	signal(SIGXFSZ, signal_handler); // Creation of a file so large that
 					 // it's not allowed anymore to grow
 
+	bool break_loop = false;
+
 	do
 	{
-		if (keep_running != 1)
-		{ break; }
+		if (keep_running == 0)
+		{ break_loop = true; }
 
 		for (GpioPin& p : pin_outputs)
 		{
@@ -148,7 +152,10 @@ int main(int argc, char* argv[])
 				continue;
 			}
 
-			if (TEMPR_COMP_OPS.at(p.condition)(temp_degC, p.condition_temp_degC)) {
+			bool terminate_match = (p.active_on_terminate && keep_running == 0);
+			if (TEMPR_COMP_OPS.at(p.condition)(temp_degC, p.condition_temp_degC)
+				|| terminate_match)
+			{
 				int outp_val = static_cast<int>(p.output_value);
 				pinMode(p.wpi_pin_number, OUTPUT);
 				digitalWrite(p.wpi_pin_number, outp_val);
@@ -156,16 +163,16 @@ int main(int argc, char* argv[])
 					<< temp_degC << ' ' << p.condition << ' '
 					<< p.condition_temp_degC << " :: wPi pin "
 					<< p.wpi_pin_number << " = " <<  outp_val
+					<< (terminate_match ? " :: TERMINATION TRIGGERED" : "")
 					<< std::endl;
 			}
 		}
 
-		for (unsigned char c = 0; c < 10; ++c) {
+		for (unsigned char c = 0; keep_running == 1 && c < 10; ++c) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(200));
-			if (keep_running != 1) break;
 		}
 
-	} while (keep_running == 1);
+	} while (!break_loop);
 
 	std::cout << '[' << std::time(nullptr) << "] Stopped " << argv[0] << std::endl;
 	return 0;

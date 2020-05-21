@@ -10,6 +10,7 @@
 		"wpi_pin": 7,
 		"output_val": false,
 		"condition": "<=",
+		"match_on_terminate": true,
 		"temperature_degC": 30,
 		"temperature_src": "/sys/class/thermal/thermal_zone0/temp"
 	}
