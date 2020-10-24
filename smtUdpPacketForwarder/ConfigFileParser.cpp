@@ -27,6 +27,7 @@ void PrintConfiguration(PlatformInfo_t &cfg)
 
   printf("  Name/Definition: %s\n  E-mail: %s\n  Description: %s\n\n", cfg.platform_definition,
     cfg.platform_email, cfg.platform_description);
+  fflush(stdout);
 }
 
 void SetGatewayIdentifier(PlatformInfo_t &cfg, const char identifier[25])
@@ -74,6 +75,8 @@ PlatformInfo_t LoadConfiguration(std::string configurationFile)
   if (sf < SpreadingFactor_t::SF_MIN || sf > SpreadingFactor_t::SF_MAX) {
     result.lora_chip_settings.all_spreading_factors = (sf == SpreadingFactor_t::SF_ALL);
     sf = SpreadingFactor_t::SF7;
+  } else {
+    result.lora_chip_settings.all_spreading_factors = false;
   }
   result.lora_chip_settings.spreading_factor = static_cast<SpreadingFactor_t>(sf);
 

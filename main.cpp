@@ -32,7 +32,6 @@ void uplinkPacketSenderWorker() { // {{{
               return false;
   };
 
-
   bool iterateOnceMore = false;
   do
   {
@@ -45,9 +44,13 @@ void uplinkPacketSenderWorker() { // {{{
 
       if (!result)
       {
-        printf("No uplink ACK received from %s\n", packet.destination.address.c_str());
+        time_t currTime{std::time(nullptr)};
+        char asciiTime[25];
+        std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
+        printf("(%s) No uplink ACK received from %s\n", asciiTime, packet.destination.address.c_str());
         if (RequeuePacket(std::move(packet), 4))
-        { printf("Requeued the uplink packed.\n"); }
+        { printf("(%s) Requeued the uplink packet.\n",  asciiTime); }
+        fflush(stdout);
       }
     }
 
@@ -60,6 +63,7 @@ void hexPrint(uint8_t data[], int length) { // {{{
 
   if (length < 1) {
     printf("\n");
+    fflush(stdout);
     return;
   }
 
@@ -84,6 +88,7 @@ void hexPrint(uint8_t data[], int length) { // {{{
     printf("\n");
   }
   printf("\n");
+  fflush(stdout);
 } // }}}
 
 enum class LoRaRecvStat { NODATA, DATARECV, DATARECVFAIL };
@@ -104,11 +109,13 @@ LoRaRecvStat receiveData(bool receiveOnAllChannels, LoRaDataPkt_t &pkt, uint8_t 
         insistDataReceiveFailure = (state != ERR_NONE);
         printf("Got preamble at SF%d, RSSI %f!\n", i, lora->getRSSI());
         break;
-      }
-    }
+     }
   }
 
   time_t timestamp{std::time(nullptr)};
+  char asciiTime[25];
+
+  std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&timestamp));
 
   if (state == ERR_NONE) { // packet was successfully received
     int msg_length = lora->getPacketLength(false);
@@ -117,8 +124,7 @@ LoRaRecvStat receiveData(bool receiveOnAllChannels, LoRaDataPkt_t &pkt, uint8_t 
     ++loraPacketStats.recv_packets_crc_good;
 
 
-    printf("\nReceived packet (%.24s):\n",
-        std::asctime(std::localtime(&timestamp)));
+    printf("\n(%s) Received packet:\n", asciiTime);
 
     // Received Signal Strength Indicator of the last received packet
     printf(" RSSI:\t\t\t%.1f dBm\n", lora->getRSSI());
@@ -143,8 +149,8 @@ LoRaRecvStat receiveData(bool receiveOnAllChannels, LoRaDataPkt_t &pkt, uint8_t 
   } else if (state == ERR_CRC_MISMATCH) {
     // packet was received, but is malformed
     ++loraPacketStats.recv_packets;
-    printf("Received packet CRC error - ignored (%.24s)!\n",
-        std::asctime(std::localtime(&timestamp)));
+    printf("(%s) Received packet CRC error - ignored!\n", asciiTime);
+    fflush(stdout);
     return LoRaRecvStat::DATARECVFAIL;
   }
 
@@ -155,6 +161,7 @@ uint16_t restartLoRaChip(PlatformInfo_t &cfg) { // {{{
 
   if (cfg.lora_chip_settings.pin_rest > -1) {
     lora->reset();
+    delay(10); // wait for the automatic callibration to finish
   }
 
   int8_t power = 17, currentLimit_ma = 100, gain = 0;
@@ -199,6 +206,12 @@ SX127x* instantiateLoRa(LoRaChipSettings_t& lora_chip_settings) // {{{
 
 int main(int argc, char **argv) {
 
+  time_t currTime{std::time(nullptr)};
+  char asciiTime[25];
+
+  std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
+  printf("(%s) Started %s...\n", asciiTime, argv[0]);
+
   char networkIfaceName[64] = "eth0";
   char gatewayId[25];
   memset(gatewayId, 0, sizeof(gatewayId));
@@ -228,15 +241,19 @@ int main(int argc, char **argv) {
   for (uint8_t c = 0; state != ERR_NONE && c < 200; ++c) {
     state = restartLoRaChip(cfg);
 
-    if (state == ERR_NONE) printf("LoRa chip setup success!\n");
+    if (state == ERR_NONE) printf("LoRa chip setup succeeded!\n\n");
     else printf("LoRa chip setup failed, code %d\n", state);
   }
 
   if (state != ERR_NONE) {
-    printf("Giving up due to failing LoRa chip setup!\nExiting!\n");
+    currTime = std::time(nullptr);
+    std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
+    printf("Giving up due to failing LoRa chip setup!\n(%.24s) Exiting!\n", asciiTime);
     SPI.endTransaction();
     return 1;
   }
+
+  fflush(stdout);
 
 
   auto signalHandler = [](int sigNum) { keepRunning = 0; };
@@ -253,7 +270,7 @@ int main(int argc, char **argv) {
 
   const uint16_t delayIntervalMs = 20;
   const uint32_t sendStatPktIntervalSeconds = 420;
-  const uint32_t loraChipRestIntervalSeconds = 300;
+  const uint32_t loraChipRestIntervalSeconds = 18000;//300;
 
   time_t nextStatUpdateTime = std::time(nullptr) - 1;
   time_t nextChipRestTime = nextStatUpdateTime + 1 + loraChipRestIntervalSeconds;
@@ -264,15 +281,17 @@ int main(int argc, char **argv) {
   std::thread uplinkSender{uplinkPacketSenderWorker};
 
   while (keepRunning) {
-    time_t currTime{std::time(nullptr)};
+    currTime = std::time(nullptr);
 
     if (keepRunning && currTime >= nextStatUpdateTime) {
       nextStatUpdateTime = currTime + sendStatPktIntervalSeconds;
-      printf("Sending stat update to server(s)... ");
+      std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
+      printf("(%s) Sending stat update to server(s)... ", asciiTime);
       PublishStatProtocolPacket(cfg, loraPacketStats);
       ++loraPacketStats.forw_packets_crc_good;
       ++loraPacketStats.forw_packets;
       printf("done\n");
+      fflush(stdout);
     }
 
     if (!keepRunning) break;
@@ -288,12 +307,14 @@ int main(int argc, char **argv) {
 
         do {
           state = restartLoRaChip(cfg);
-          printf("Regular LoRa chip reset done - code %d, %s success\n", state,
-              (state == ERR_NONE ? "with" : "WITHOUT"));
+          std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
+          printf("(%s) Regular LoRa chip reset done - code %d, %s success\n",
+               asciiTime, state, (state == ERR_NONE ? "with" : "WITHOUT"));
+	  fflush(stdout);
           delay(delayIntervalMs);
         } while (state != ERR_NONE);
 
-      } else {
+      } else if (!receiveOnAllChannels) {
         delay(delayIntervalMs);
       }
 
@@ -301,7 +322,11 @@ int main(int argc, char **argv) {
 
   }
 
-  printf("\nShutting down...\n");
+  currTime = std::time(nullptr);
+  std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
+
+  printf("\n(%s) Shutting down...\n", asciiTime);
+  fflush(stdout);
   SPI.endTransaction();
   uplinkSender.join();
 }
