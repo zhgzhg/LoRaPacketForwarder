@@ -109,7 +109,8 @@ LoRaRecvStat receiveData(bool receiveOnAllChannels, LoRaDataPkt_t &pkt, uint8_t 
         insistDataReceiveFailure = (state != ERR_NONE);
         printf("Got preamble at SF%d, RSSI %f!\n", i, lora->getRSSI());
         break;
-     }
+      }
+    }
   }
 
   time_t timestamp{std::time(nullptr)};
