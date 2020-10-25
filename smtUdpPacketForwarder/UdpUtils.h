@@ -73,7 +73,7 @@ typedef struct PackagedDataToSend
 } PackagedDataToSend_t;
 
 void Die(const char *s);
-void SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_sin);
+bool SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_sin);
 bool SendUdp(Server_t &server, char *msg, int length,
              std::function<bool(char*, int, char*, int)> &validator);
 NetworkConf_t PrepareNetworking(const char* networkInterfaceName, suseconds_t dataRecvTimeout, char gatewayId[25]);

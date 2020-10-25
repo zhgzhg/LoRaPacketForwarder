@@ -12,7 +12,7 @@ void Die(const char *s) // {{{
 } // }}}
 
 
-void SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_sin) // {{{
+bool SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_sin) // {{{
 {
   struct addrinfo hints;
   memset(&hints, 0, sizeof(struct addrinfo));
@@ -29,7 +29,7 @@ void SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_
   int error = getaddrinfo(p_hostname, service, &hints, &p_result);
   if (error != 0) {
     fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(error));
-    exit(EXIT_FAILURE);
+    return false;
   }
 
   // Loop over all returned results
@@ -40,6 +40,7 @@ void SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_
   }
 
   freeaddrinfo(p_result);
+  return true;
 } // }}}
 
 bool SendUdp(Server_t &server, char *msg, int length,
@@ -49,12 +50,12 @@ bool SendUdp(Server_t &server, char *msg, int length,
 
   networkConf.si_other.sin_port = htons(server.port);
  
-  SolveHostname(server.address.c_str(), server.port, &networkConf.si_other);
+  if (!SolveHostname(server.address.c_str(), server.port, &networkConf.si_other))
+  { return false; }
   
   if (sendto(networkConf.socket, msg, length, 0, (struct sockaddr *) &networkConf.si_other,
-      sizeof(networkConf.si_other)) == -1) {
-    return false;
-  }
+      sizeof(networkConf.si_other)) == -1)
+  { return false; }
 
   char resp[32];
 
