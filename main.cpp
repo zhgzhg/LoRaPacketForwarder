@@ -271,7 +271,7 @@ int main(int argc, char **argv) {
 
   const uint16_t delayIntervalMs = 20;
   const uint32_t sendStatPktIntervalSeconds = 420;
-  const uint32_t loraChipRestIntervalSeconds = 18000;//300;
+  const uint32_t loraChipRestIntervalSeconds = 2700;
 
   time_t nextStatUpdateTime = std::time(nullptr) - 1;
   time_t nextChipRestTime = nextStatUpdateTime + 1 + loraChipRestIntervalSeconds;
