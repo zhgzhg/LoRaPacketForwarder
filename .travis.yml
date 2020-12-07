@@ -2,7 +2,7 @@ dist: bionic
 sudo: required
 script:
   - cd wiringOP
-  - PLATFORM=OrangePi_PC ./build
+  - PLATFORM=orangepipc ./build
   - cd ../WiringOP-Zero
   - ./build
   - cd ..
