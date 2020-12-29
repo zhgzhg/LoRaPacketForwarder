@@ -7,3 +7,7 @@
 [submodule "WiringOP-Zero"]
 	path = WiringOP-Zero
 	url = https://github.com/zhgzhg/WiringOP-Zero.git
+[submodule "RadioLib"]
+	path = RadioLib
+	url = https://github.com/zhgzhg/RadioLib.git
+	branch = linux
