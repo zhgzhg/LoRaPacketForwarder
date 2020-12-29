@@ -42,6 +42,7 @@ struct GpioPin
 	bool active_on_terminate;
 	long double condition_temp_degC;
 	std::string temp_degC_source;
+	long double last_read_temp_degC;
 };
 
 std::vector<GpioPin> parse_config(std::ifstream& fs)
@@ -61,6 +62,7 @@ std::vector<GpioPin> parse_config(std::ifstream& fs)
 		p.condition_temp_degC = o["temperature_degC"].GetDouble();
 		p.active_on_terminate = o.HasMember("match_on_terminate") && o["match_on_terminate"].GetBool();
 		p.temp_degC_source = o["temperature_src"].GetString();
+		p.last_read_temp_degC = 0.0;
 
 		result.push_back(p);
 	}
@@ -131,10 +133,12 @@ int main(int argc, char* argv[])
 		if (keep_running == 0)
 		{ break_loop = true; }
 
+
 		for (GpioPin& p : pin_outputs)
 		{
-			auto temp_degC = read_temp_degC(p.temp_degC_source);
-			if (std::isnan(temp_degC))
+			long double temp_degC = read_temp_degC(p.temp_degC_source);
+
+			if (p.last_read_temp_degC != temp_degC && std::isnan(temp_degC))
 			{
 				std::cerr << '[' << std::time(nullptr)
 					<< "] Cannot read current temperature for wPi pin "
@@ -153,8 +157,8 @@ int main(int argc, char* argv[])
 			}
 
 			bool terminate_match = (p.active_on_terminate && keep_running == 0);
-			if (TEMPR_COMP_OPS.at(p.condition)(temp_degC, p.condition_temp_degC)
-				|| terminate_match)
+			if (terminate_match || (p.last_read_temp_degC != temp_degC
+				&& TEMPR_COMP_OPS.at(p.condition)(temp_degC, p.condition_temp_degC)))
 			{
 				int outp_val = static_cast<int>(p.output_value);
 				pinMode(p.wpi_pin_number, OUTPUT);
@@ -166,6 +170,8 @@ int main(int argc, char* argv[])
 					<< (terminate_match ? " :: TERMINATION TRIGGERED" : "")
 					<< std::endl;
 			}
+
+			p.last_read_temp_degC = temp_degC;
 		}
 
 		for (unsigned char c = 0; keep_running == 1 && c < 10; ++c) {
