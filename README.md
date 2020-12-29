@@ -14,11 +14,9 @@ The goal of the project is to provide simple LoRa forwarder for:
 * Linux - OrangePi, RaspberryPi, etc.
 * Very basic support for Semtech UDP protocol v2 - uplink and stats
     * The Things Network - tested
-* SPI communication based on wiringPi and modified LoRaLib for Linux (Orange Pi or Raspberry PI) with LoRa chips:
-    * SX1278 - tested
-    * Probably supports whole chips series like:
-        * SX127x 
-        * RFM9x 
+* SPI communication based on wiringPi and modified LoRaLib/RadioLib for Linux (Orange Pi or Raspberry PI) with LoRa chips:
+    * SX127x series
+    * RFM9x series
 * Basic JSON configuration file
 
 How to Use
@@ -103,7 +101,7 @@ For e.g.:
 
 ### Orange PI: compile & install
 
-The following steps have been tested on Arbian v5.90. However it is recommended
+The following steps have been tested on Armbian v5.90. However it is recommended
 to use its **latest** version.
 
 * Compile wiringPi for Orange PI **//for the ZERO model use WiringOP-Zero library instead//** with `./build` command
@@ -128,6 +126,7 @@ to use its **latest** version.
         * SX1276
         * SX1277
         * SX1278
+        * SX1279
         * RFM95
         * RFM96
         * RFM97
@@ -167,6 +166,8 @@ immediately pick data from the transmitter.
 ### This project is influenced and contains code from:
 
 [https://github.com/jgromes/LoRaLib](https://github.com/jgromes/LoRaLib)
+
+[https://github.com/jgromes/RadioLib](https://github.com/jgromes/RadioLib)
 
 [https://github.com/adafruit/single_chan_pkt_fwd](https://github.com/adafruit/single_chan_pkt_fwd)
 
