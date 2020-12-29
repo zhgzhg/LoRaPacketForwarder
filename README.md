@@ -89,7 +89,7 @@ For e.g.:
           |         SLCK |===== Pin #23 [OrangePiH3 Physical] / [[a.k.a WiringPi pin ## 14]]
           |          NSS |===== Pin #12 [OrangePiH3 Physical] / [a.k.a WiringPi pin ## 6]
           |         DIO0 |===== Pin #16 [OrangePiH3 Physical] / [a.k.a WiringPi pin ## 9]
-          |         REST |===== optional, connect to VCC if it isn't used  
+          |         REST |===== optional, connect to VCC if it isn't used
           |          GND |
            --------------
 
@@ -122,12 +122,12 @@ to use its **latest** version.
 
 * Create config.json by copying config.json.template:
     * Edit the ic_model field to specify the LoRa chip model. Use one of the following supported values below:
-        * For SX126x series: _SX1261, SX1262, or SX1268_
-        * For SX127x series: _SX1272, SX1273, SX1276, SX1277, SX1278, or SX1279_
-        * For RFM9x series: _RFM95, RFM96, RFM97, or RFM98_
+        * For SX126x series: `SX1261`, `SX1262`, or `SX1268`
+        * For SX127x series: `SX1272`, `SX1273`, `SX1276`, `SX1277`, `SX1278`, or `SX1279`
+        * For RFM9x series: `RFM95`, `RFM96`, `RFM97`, or `RFM98`
     * Edit the pinout (execute `gpio readall` to check wiringPi pin numbers that need to be specified). Please
 **note** that ***pin_rest*** is *optional*. If it isn't used you should leave it to -1 and also connect it to 3.3V;
-    * Edit the rest parameters accordingly.
+    * Edit the remaining parameters accordingly.
 
 * To execute the application:
     * `./LoRaPktFwrd`
