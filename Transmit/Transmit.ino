@@ -1,23 +1,31 @@
-/*
-   LoRaLib Transmit Example - configured to be used with the receiver
-   in this project. 
+/**
+ * Automatically generated markers by Drizzle 0.10.1 dependency helper tool, based on the selected
+ * at that moment board options in Arduino IDE's UI. To apply them make sure this file is saved, then click on
+ * Tools / Apply Drizzle @ Markers. To obtain Drizzle visit: https://github.com/zhgzhg/Drizzle
+ *
+ * @BoardManager esp8266::^2.7.4::https://arduino.esp8266.com/stable/package_esp8266com_index.json
+ * @Board esp8266::esp8266::NodeMCU 1.0 (ESP-12E Module)
+ * @BoardSettings esp8266::NodeMCU 1.0 (ESP-12E Module)::Builtin Led->2||Upload Speed->115200
+ * @DependsOn RadioLib::^4.0.6
 
-   This example transmits LoRa packets with one second delays
-   between them. Each packet contains up to 256 bytes
+
+   RadioLib Transmit Example - configured to be used with the receiver in this project. 
+
+   This example transmits LoRa packets with one second delays between them. Each packet contains up to 256 bytes
    of data, in the form of:
     - Arduino String
     - null-terminated char array (C-string)
     - arbitrary binary data (byte array)
 
    For more detailed information, see the LoRaLib Wiki
-   https://github.com/jgromes/LoRaLib/wiki
+   https://github.com/jgromes/RadioLib/wiki
 
    For full API reference, see the GitHub Pages
-   https://jgromes.github.io/LoRaLib/
+   https://jgromes.github.io/RadioLib/
 */
 
 // include the library
-#include <LoRaLib.h>
+#include <RadioLib.h>
 
 // create instance of LoRa class using SX1278 module
 // this pinout corresponds to RadioShield
@@ -29,7 +37,7 @@
 #define DIO0 5  // GPIO5
 #define NSS 15  // GPIO15 = CHIP SELECT
 #define DIO1 16 // GPIO16
-SX1278 lora = new LoRa(NSS, DIO0, DIO1);
+SX1278 lora = new Module(NSS, DIO0, DIO1);
 
 static unsigned long pktNum = 0;
 
