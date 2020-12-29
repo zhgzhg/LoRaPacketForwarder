@@ -162,13 +162,17 @@ int main(int argc, char* argv[])
 			{
 				int outp_val = static_cast<int>(p.output_value);
 				pinMode(p.wpi_pin_number, OUTPUT);
-				digitalWrite(p.wpi_pin_number, outp_val);
-				std::cout << '[' << std::time(nullptr) << "] "
-					<< temp_degC << ' ' << p.condition << ' '
-					<< p.condition_temp_degC << " :: wPi pin "
-					<< p.wpi_pin_number << " = " <<  outp_val
-					<< (terminate_match ? " :: TERMINATION TRIGGERED" : "")
-					<< std::endl;
+				int curr_outp_val = digitalRead(p.wpi_pin_number);
+
+				if (curr_outp_val != outp_val) {
+					digitalWrite(p.wpi_pin_number, outp_val);
+					std::cout << '[' << std::time(nullptr) << "] "
+						<< temp_degC << ' ' << p.condition << ' '
+						<< p.condition_temp_degC << " :: wPi pin "
+						<< p.wpi_pin_number << " = " <<  outp_val
+						<< (terminate_match ? " :: TERMINATION TRIGGERED" : "")
+						<< std::endl;
+				}
 			}
 
 			p.last_read_temp_degC = temp_degC;
