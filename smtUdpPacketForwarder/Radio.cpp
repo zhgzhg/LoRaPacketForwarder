@@ -6,92 +6,7 @@
 #include <typeinfo>
 
 
-#define MODULE_RESET(chip_class, origin, is_reset) if (!is_reset) { \
-	chip_class* module = dynamic_cast<chip_class*>(origin); \
-	if (module != nullptr) { \
-	  is_reset = true; \
-	  module->reset(); \
-	  delay(10); \
-	} \
-}
-
-#define MODULE_REINIT(chip_class, origin, is_reinitted, result, pi_cfg, power, current_lim_ma, gain) { \
-	if (!is_reinitted && origin != nullptr && typeid(*origin) == typeid(chip_class)) { \
-          is_reinitted = true; \
-	  chip_class* chip = static_cast<chip_class*>(origin); \
-	  result = chip->begin( \
-	    pi_cfg.lora_chip_settings.carrier_frequency_mhz, \
-	    pi_cfg.lora_chip_settings.bandwidth_khz, \
-	    pi_cfg.lora_chip_settings.spreading_factor, \
-	    pi_cfg.lora_chip_settings.coding_rate, \
-	    pi_cfg.lora_chip_settings.sync_word, \
-	    power, \
-	    pi_cfg.lora_chip_settings.preamble_length, \
-	    gain \
-	  ); \
-	  if (result == ERR_NONE) result = chip->setCurrentLimit(current_lim_ma); \
-	} \
-}
-
-uint16_t restartLoRaChip(PhysicalLayer *lora, PlatformInfo_t &cfg) { // {{{
-  if (cfg.lora_chip_settings.pin_rest > -1) {
-    bool is_reset = false;
-    MODULE_RESET(SX1272, lora, is_reset); 
-    MODULE_RESET(SX1273, lora, is_reset); 
-    MODULE_RESET(SX1276, lora, is_reset); 
-    MODULE_RESET(SX1277, lora, is_reset); 
-    MODULE_RESET(SX1278, lora, is_reset); 
-    MODULE_RESET(SX1279, lora, is_reset); 
-    MODULE_RESET(RFM95, lora, is_reset); 
-    MODULE_RESET(RFM96, lora, is_reset); 
-    MODULE_RESET(RFM97, lora, is_reset); 
-  }
-
-  int8_t power = 17, currentLimit_ma = 100, gain = 0;
-  bool is_reinitted = false;
-  uint16_t result = ERR_NONE + 1;
-
-  MODULE_REINIT(SX1272, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
-  MODULE_REINIT(SX1273, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
-  MODULE_REINIT(SX1276, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
-  MODULE_REINIT(SX1277, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
-  MODULE_REINIT(SX1278, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
-  MODULE_REINIT(SX1279, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
-  MODULE_REINIT(RFM95, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
-  MODULE_REINIT(RFM96, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
-  MODULE_REINIT(RFM97, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain);
-
-  return result;
-} // }}}
-
-PhysicalLayer* instantiateLoRaChip(LoRaChipSettings_t& lora_chip_settings, SPIClass &spiClass, SPISettings &spiSettings) { // {{{
-  static const std::map<std::string, std::function<PhysicalLayer*(Module*)> > LORA_CHIPS {
-    { "SX1272", [](Module* lora_module_settings) { return new SX1272(lora_module_settings); } },
-    { "SX1273", [](Module* lora_module_settings) { return new SX1273(lora_module_settings); } },
-    { "SX1276", [](Module* lora_module_settings) { return new SX1276(lora_module_settings); } },
-    { "SX1277", [](Module* lora_module_settings) { return new SX1277(lora_module_settings); } },
-    { "SX1278", [](Module* lora_module_settings) { return new SX1278(lora_module_settings); } },
-    { "SX1279", [](Module* lora_module_settings) { return new SX1279(lora_module_settings); } },
-    { "RFM95", [](Module* lora_module_settings) { return new RFM95(lora_module_settings); } },
-    { "RFM96", [](Module* lora_module_settings) { return new RFM96(lora_module_settings); } },
-    { "RFM97", [](Module* lora_module_settings) { return new RFM97(lora_module_settings); } },
-    { "RFM98", [](Module* lora_module_settings) { return new RFM96(lora_module_settings); } } // LIKE RFM96
-  };
-
-  Module *module_settings = new Module(
-    lora_chip_settings.pin_nss_cs,
-    lora_chip_settings.pin_dio0,
-    (lora_chip_settings.pin_rest > -1 ? lora_chip_settings.pin_rest : RADIOLIB_NC),
-    lora_chip_settings.pin_dio1,
-    spiClass,
-    spiSettings
-  );
-
-  return LORA_CHIPS.at(lora_chip_settings.ic_model)(module_settings);
-} // }}}
-
 void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
-
   if (length < 1) {
     fprintf(dest, "\n");
     fflush(dest);
@@ -122,20 +37,85 @@ void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
   fflush(dest);
 } // }}}
 
-#define PKT_ENRICHER(origin_class) ([](PhysicalLayer *physical_layer, LoRaDataPkt_t &packet, float &freqErr) -> void { \
-	origin_class *inst = static_cast<origin_class*>(physical_layer); \
-	if (inst != nullptr) { \
-	  packet.RSSI = inst->getRSSI(); \
-	  packet.SNR = inst->getSNR(); \
-	  freqErr = inst->getFrequencyError(); \
-	} else { \
-	  packet.RSSI = 1.0f; \
-	  packet.SNR = 1.0f; \
-          freqErr = 0.0f; \
+#define MODULE_RESET(chip_class, origin, is_reset) if (!is_reset) { \
+	chip_class* module = dynamic_cast<chip_class*>(origin); \
+	if (module != nullptr) { \
+	  is_reset = true; \
+	  module->reset(); \
+	  delay(10); \
 	} \
-})
+}
 
-#define PKT_ENRICHER2(origin_class, instance_ptr, inst_type_info, lora_packet, freq_err) \
+#define MODULE_REINIT(chip_class, origin, is_reinitted, result, pi_cfg, power, current_lim_ma, gain) \
+	if (!is_reinitted && origin != nullptr && typeid(*origin) == typeid(chip_class)) { \
+          is_reinitted = true; \
+	  chip_class* chip = static_cast<chip_class*>(origin); \
+	  result = chip->begin( \
+	    pi_cfg.lora_chip_settings.carrier_frequency_mhz, \
+	    pi_cfg.lora_chip_settings.bandwidth_khz, \
+	    pi_cfg.lora_chip_settings.spreading_factor, \
+	    pi_cfg.lora_chip_settings.coding_rate, \
+	    pi_cfg.lora_chip_settings.sync_word, \
+	    power, \
+	    pi_cfg.lora_chip_settings.preamble_length, \
+	    gain \
+	  ); \
+	  if (result == ERR_NONE) result = chip->setCurrentLimit(current_lim_ma); \
+	}
+
+uint16_t restartLoRaChip(PhysicalLayer *lora, PlatformInfo_t &cfg) { // {{{
+  if (cfg.lora_chip_settings.pin_rest > -1) {
+    bool is_reset = false;
+    MODULE_RESET(SX1261, lora, is_reset); MODULE_RESET(SX1262, lora, is_reset);  MODULE_RESET(SX1268, lora, is_reset); 
+    MODULE_RESET(SX1272, lora, is_reset); MODULE_RESET(SX1273, lora, is_reset);  MODULE_RESET(SX1276, lora, is_reset); 
+    MODULE_RESET(SX1277, lora, is_reset); MODULE_RESET(SX1278, lora, is_reset);  MODULE_RESET(SX1279, lora, is_reset); 
+    MODULE_RESET(RFM95, lora, is_reset); MODULE_RESET(RFM96, lora, is_reset); MODULE_RESET(RFM97, lora, is_reset); 
+  }
+
+  int8_t power = 17, currentLimit_ma = 100, gain = 0;
+  bool is_reinitted = false;
+  uint16_t result = ERR_NONE + 1;
+
+  MODULE_REINIT(SX1261, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
+  MODULE_REINIT(SX1262, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
+  MODULE_REINIT(SX1268, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
+  MODULE_REINIT(SX1272, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
+  MODULE_REINIT(SX1273, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
+  MODULE_REINIT(SX1276, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
+  MODULE_REINIT(SX1277, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
+  MODULE_REINIT(SX1278, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
+  MODULE_REINIT(SX1279, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
+  MODULE_REINIT(RFM95, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
+  MODULE_REINIT(RFM96, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
+  MODULE_REINIT(RFM97, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain);
+
+  return result;
+} // }}}
+
+#define MODULE_INIT_PAIR(origin_class_name, origin_class) { #origin_class_name, [](Module* lora_module_settings) { return new origin_class(lora_module_settings); } }
+
+PhysicalLayer* instantiateLoRaChip(LoRaChipSettings_t& lora_chip_settings, SPIClass &spiClass, SPISettings &spiSettings) { // {{{
+  static const std::map<std::string, std::function<PhysicalLayer*(Module*)> > LORA_CHIPS {
+    MODULE_INIT_PAIR(SX1261, SX1261), MODULE_INIT_PAIR(SX1262, SX1262), MODULE_INIT_PAIR(SX1268, SX1268),
+    MODULE_INIT_PAIR(SX1272, SX1272), MODULE_INIT_PAIR(SX1273, SX1273), MODULE_INIT_PAIR(SX1276, SX1276),
+    MODULE_INIT_PAIR(SX1277, SX1277), MODULE_INIT_PAIR(SX1278, SX1278), MODULE_INIT_PAIR(SX1279, SX1279),
+    MODULE_INIT_PAIR(RFM95, RFM95), MODULE_INIT_PAIR(RFM96, RFM96), MODULE_INIT_PAIR(RFM97, RFM97),
+    MODULE_INIT_PAIR(RFM98, RFM96) // like RFM96
+ };
+
+  Module *module_settings = new Module(
+    lora_chip_settings.pin_nss_cs,
+    lora_chip_settings.pin_dio0,
+    (lora_chip_settings.pin_rest > -1 ? lora_chip_settings.pin_rest : RADIOLIB_NC),
+    lora_chip_settings.pin_dio1,
+    spiClass,
+    spiSettings
+  );
+
+  return LORA_CHIPS.at(lora_chip_settings.ic_model)(module_settings);
+} // }}}
+
+#define PKT_ENRICHER(origin_class, instance_ptr, inst_type_info, lora_packet, freq_err) \
 if (inst_type_info == typeid(origin_class)) { \
 	origin_class *inst = static_cast<origin_class*>(instance_ptr); \
 	lora_packet.RSSI = inst->getRSSI(); \
@@ -143,34 +123,30 @@ if (inst_type_info == typeid(origin_class)) { \
 	freq_err = inst->getFrequencyError(); \
 	return; \
 }
-
+#define PKT_ENRICHER_NO_FREQ_ERR(origin_class, instance_ptr, inst_type_info, lora_packet, freq_err) \
+if (inst_type_info == typeid(origin_class)) { \
+        origin_class *inst = static_cast<origin_class*>(instance_ptr); \
+        lora_packet.RSSI = inst->getRSSI(); \
+        lora_packet.SNR = inst->getSNR(); \
+        freq_err = 0.0f; \
+        return; \
+}
 
 void enrichWithRadioStats(PhysicalLayer *lora, LoRaDataPkt_t &pkt, float &freqErr) { // {{{
-  /*static const std::map<std::string, std::function<void(PhysicalLayer*, LoRaDataPkt_t&, float&)> > PKT_ENRICHERS {
-    { "SX1272", PKT_ENRICHER(SX127x) },
-    { "SX1273", PKT_ENRICHER(SX127x) },
-    { "SX1276", PKT_ENRICHER(SX127x) },
-    { "SX1277", PKT_ENRICHER(SX127x) },
-    { "SX1278", PKT_ENRICHER(SX127x) },
-    { "SX1279", PKT_ENRICHER(SX127x) },
-    { "RFM95", PKT_ENRICHER(SX127x) },
-    { "RFM96", PKT_ENRICHER(SX127x) },
-    { "RFM97", PKT_ENRICHER(SX127x) },
-    { "RFM98", PKT_ENRICHER(SX127x) }
-  };
-
-  PKT_ENRICHERS.at(lora_chip_settings.ic_model)(lora, pkt, freqErr);*/
   const std::type_info &loraInstTypeInfo = typeid(*lora);
 
-  PKT_ENRICHER2(SX1272, lora, loraInstTypeInfo, pkt, freqErr);
-  PKT_ENRICHER2(SX1273, lora, loraInstTypeInfo, pkt, freqErr);
-  PKT_ENRICHER2(SX1276, lora, loraInstTypeInfo, pkt, freqErr);
-  PKT_ENRICHER2(SX1277, lora, loraInstTypeInfo, pkt, freqErr);
-  PKT_ENRICHER2(SX1278, lora, loraInstTypeInfo, pkt, freqErr);
-  PKT_ENRICHER2(SX1279, lora, loraInstTypeInfo, pkt, freqErr);
-  PKT_ENRICHER2(RFM95, lora, loraInstTypeInfo, pkt, freqErr);
-  PKT_ENRICHER2(RFM96, lora, loraInstTypeInfo, pkt, freqErr);
-  PKT_ENRICHER2(RFM97, lora, loraInstTypeInfo, pkt, freqErr);
+  PKT_ENRICHER_NO_FREQ_ERR(SX1261, lora, loraInstTypeInfo, pkt, freqErr);
+  PKT_ENRICHER_NO_FREQ_ERR(SX1262, lora, loraInstTypeInfo, pkt, freqErr);
+  PKT_ENRICHER_NO_FREQ_ERR(SX1268, lora, loraInstTypeInfo, pkt, freqErr);
+  PKT_ENRICHER(SX1272, lora, loraInstTypeInfo, pkt, freqErr);
+  PKT_ENRICHER(SX1273, lora, loraInstTypeInfo, pkt, freqErr);
+  PKT_ENRICHER(SX1276, lora, loraInstTypeInfo, pkt, freqErr);
+  PKT_ENRICHER(SX1277, lora, loraInstTypeInfo, pkt, freqErr);
+  PKT_ENRICHER(SX1278, lora, loraInstTypeInfo, pkt, freqErr);
+  PKT_ENRICHER(SX1279, lora, loraInstTypeInfo, pkt, freqErr);
+  PKT_ENRICHER(RFM95, lora, loraInstTypeInfo, pkt, freqErr);
+  PKT_ENRICHER(RFM96, lora, loraInstTypeInfo, pkt, freqErr);
+  PKT_ENRICHER(RFM97, lora, loraInstTypeInfo, pkt, freqErr);
 
   // else:
   pkt.RSSI = 1.0f;
@@ -194,9 +170,8 @@ if (!is_matched && lora_type == typeid(origin_class)) { \
 	} \
 }
 
-LoRaRecvStat recvLoRaUplinkData(LoRaChipSettings_t& lora_chip_settings, PhysicalLayer *lora,
-		bool receiveOnAllChannels, LoRaDataPkt_t &pkt, uint8_t msg[],
-		LoRaPacketTrafficStats_t &loraPacketStats) { // {{{
+LoRaRecvStat recvLoRaUplinkData(PhysicalLayer *lora,bool receiveOnAllChannels, LoRaDataPkt_t &pkt,
+                                uint8_t msg[], LoRaPacketTrafficStats_t &loraPacketStats) { // {{{
 
   int state = ERR_RX_TIMEOUT;
   bool insistDataReceiveFailure = false;
@@ -206,7 +181,9 @@ LoRaRecvStat recvLoRaUplinkData(LoRaChipSettings_t& lora_chip_settings, Physical
   } else {
     const std::type_info &loraTypeInfo = typeid(*lora);
     bool is_matched = false;
-    ITER_ALL_SF(SX1272, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX);
+    ITER_ALL_SF(SX1261, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX);
+    ITER_ALL_SF(SX1262, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX);
+    ITER_ALL_SF(SX1268, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX);
     ITER_ALL_SF(SX1273, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX);
     ITER_ALL_SF(SX1276, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX);
     ITER_ALL_SF(SX1277, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX);

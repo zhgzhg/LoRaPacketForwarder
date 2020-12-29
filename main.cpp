@@ -152,8 +152,8 @@ int main(int argc, char **argv) {
 
     if (!keepRunning) break;
 
-    LoRaRecvStat lastRecvResult = recvLoRaUplinkData(cfg.lora_chip_settings, lora,
-                                    receiveOnAllChannels, loraDataPacket, msg, loraPacketStats);
+    LoRaRecvStat lastRecvResult = recvLoRaUplinkData(
+		                    lora, receiveOnAllChannels, loraDataPacket, msg, loraPacketStats);
 
     if (lastRecvResult == LoRaRecvStat::DATARECV) {
       PublishLoRaProtocolPacket(cfg, loraDataPacket);

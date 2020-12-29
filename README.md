@@ -15,6 +15,7 @@ The goal of the project is to provide simple LoRa forwarder for:
 * Very basic support for Semtech UDP protocol v2 - uplink and stats
     * The Things Network - tested
 * SPI communication based on wiringPi and modified LoRaLib/RadioLib for Linux (Orange Pi or Raspberry PI) with LoRa chips:
+    * SX126x series
     * SX127x series
     * RFM9x series
 * Basic JSON configuration file
@@ -121,16 +122,9 @@ to use its **latest** version.
 
 * Create config.json by copying config.json.template:
     * Edit the ic_model field to specify the LoRa chip model. Use one of the following supported values below:
-        * SX1272
-        * SX1273
-        * SX1276
-        * SX1277
-        * SX1278
-        * SX1279
-        * RFM95
-        * RFM96
-        * RFM97
-        * RFM98
+        * For SX126x series: _SX1261, SX1262, or SX1268_
+        * For SX127x series: _SX1272, SX1273, SX1276, SX1277, SX1278, or SX1279_
+        * For RFM9x series: _RFM95, RFM96, RFM97, or RFM98_
     * Edit the pinout (execute `gpio readall` to check wiringPi pin numbers that need to be specified). Please
 **note** that ***pin_rest*** is *optional*. If it isn't used you should leave it to -1 and also connect it to 3.3V;
     * Edit the rest parameters accordingly.
@@ -163,7 +157,15 @@ transmitting data. Using the default configuration inside
 immediately pick data from the transmitter.
 
 
-### This project is influenced and contains code from:
+## Other Extras
+
+
+### [TempMon](tools/TempMon)
+
+A tiny temperature monitor program that can run in the background and modify GPIO pins in response.
+
+
+## This project is influenced and contains code from:
 
 [https://github.com/jgromes/LoRaLib](https://github.com/jgromes/LoRaLib)
 
