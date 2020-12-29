@@ -11,14 +11,54 @@
 #include <thread>
 #include <typeinfo>
 
+#include <unistd.h>
+#include <linux/limits.h>
+
 #include <RadioLib.h>
 
 #include "smtUdpPacketForwarder/ConfigFileParser.h"
 #include "smtUdpPacketForwarder/UdpUtils.h"
 #include "smtUdpPacketForwarder/Radio.h"
 
+extern char **environ;
 
 static volatile sig_atomic_t keepRunning = 1;
+static volatile unsigned long hearthbeat = 0;
+
+void appIntubator(char* const argv[]) {
+  unsigned long lastHearthbeat = hearthbeat;
+  std::time_t lastObtained = std::time(nullptr);
+
+  while (keepRunning) {
+     if (lastHearthbeat != hearthbeat) {
+      lastHearthbeat = hearthbeat;
+      lastObtained = std::time(nullptr);
+    } else if (std::time(nullptr) - lastObtained > 180) { // 3 minutes
+      time_t currTime{std::time(nullptr)};
+      char asciiTime[25];
+      std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
+      printf("(%s) Main thread block detected! Restarting the application...\n", asciiTime);
+      fflush(stdout);
+
+      char exePath[PATH_MAX];
+      ssize_t len = ::readlink("/proc/self/exe", exePath, sizeof(exePath));
+      if (len == -1 || len == sizeof(exePath)) {
+        len = strlen(argv[0]);
+        if (len > 0 && len != sizeof(exePath)) {
+          strcpy(exePath, argv[0]);
+	} else {
+	  len = 0;
+	}
+      }
+      exePath[len] = '\0';
+
+      execvpe(exePath, argv, environ);
+      keepRunning = 0;
+    }
+
+    if (keepRunning) std::this_thread::sleep_for(std::chrono::seconds(1));
+  }
+}
 
 
 void uplinkPacketSenderWorker() { // {{{
@@ -135,8 +175,11 @@ int main(int argc, char **argv) {
   uint8_t msg[SX127X_MAX_PACKET_LENGTH];
 
   std::thread uplinkSender{uplinkPacketSenderWorker};
+  std::thread intubator{appIntubator, argv};
+  intubator.detach();
 
   while (keepRunning) {
+//    ++hearthbeat;
     currTime = std::time(nullptr);
 
     if (keepRunning && currTime >= nextStatUpdateTime) {
