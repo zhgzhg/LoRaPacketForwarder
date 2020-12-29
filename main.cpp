@@ -25,7 +25,7 @@ extern char **environ;
 static volatile sig_atomic_t keepRunning = 1;
 static volatile unsigned long hearthbeat = 0;
 
-void appIntubator(char* const argv[]) {
+void appIntubator(char* const argv[]) { // {{{
   unsigned long lastHearthbeat = hearthbeat;
   std::time_t lastObtained = std::time(nullptr);
 
@@ -58,8 +58,7 @@ void appIntubator(char* const argv[]) {
 
     if (keepRunning) std::this_thread::sleep_for(std::chrono::seconds(1));
   }
-}
-
+} // }}}
 
 void uplinkPacketSenderWorker() { // {{{
 
@@ -179,7 +178,7 @@ int main(int argc, char **argv) {
   intubator.detach();
 
   while (keepRunning) {
-//    ++hearthbeat;
+    ++hearthbeat;
     currTime = std::time(nullptr);
 
     if (keepRunning && currTime >= nextStatUpdateTime) {
