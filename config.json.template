@@ -36,6 +36,60 @@
       "port": 1700,
       "recv_timeout_ms": 500,
       "enabled": false
+    },
+    {
+      "address": "router.cn.thethings.network",
+      "port": 1700,
+      "recv_timeout_ms": 500,
+      "enabled": false
+    },
+    {
+      "address": "router.as.thethings.network",
+      "port": 1700,
+      "recv_timeout_ms": 500,
+      "enabled": false
+    },
+    {
+      "address": "router.as1.thethings.network",
+      "port": 1700,
+      "recv_timeout_ms": 500,
+      "enabled": false
+    },
+    {
+      "address": "router.as2.thethings.network",
+      "port": 1700,
+      "recv_timeout_ms": 500,
+      "enabled": false
+    },
+    {
+      "address": "router.kr.thethings.network",
+      "port": 1700,
+      "recv_timeout_ms": 500,
+      "enabled": false
+    },
+    {
+      "address": "router.jp.thethings.network",
+      "port": 1700,
+      "recv_timeout_ms": 500,
+      "enabled": false
+    },
+    {
+      "address": "au915.thethings.meshed.com.au",
+      "port": 1700,
+      "recv_timeout_ms": 500,
+      "enabled": false
+    },
+    {
+      "address": "as923.thethings.meshed.com.au",
+      "port": 1700,
+      "recv_timeout_ms": 500,
+      "enabled": false
+    },
+    {
+      "address": "ttn.opennetworkinfrastructure.org",
+      "port": 1700,
+      "recv_timeout_ms": 500,
+      "enabled": false
     }
   ]
 }
