@@ -214,7 +214,7 @@ void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pk
   writer.String("rxfw");
   writer.Uint(pktStats.forw_packets);
   writer.String("ackr");
-  writer.Double(0);
+  writer.Double((pktStats.acked_forw_packets / (pktStats.forw_packets > 0 ? pktStats.forw_packets : 1)) * 100.0);
   writer.String("dwnb");
   writer.Uint(0);
   writer.String("txnb");

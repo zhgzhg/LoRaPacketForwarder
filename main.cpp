@@ -60,7 +60,7 @@ void appIntubator(char* const argv[]) { // {{{
   }
 } // }}}
 
-void uplinkPacketSenderWorker() { // {{{
+void uplinkPacketSenderWorker(LoRaPacketTrafficStats_t *loraPacketStats) { // {{{
 
   static std::function<bool(char*, int, char*, int)> isValidAck =
           [](char* origMsg, int origMsgSz, char* respMsg, int respMsgSz) {
@@ -91,6 +91,8 @@ void uplinkPacketSenderWorker() { // {{{
         { printf("(%s) Requeued the uplink packet.\n",  asciiTime); }
         fflush(stdout);
       }
+      else
+      { ++(loraPacketStats->acked_forw_packets); }
     }
 
     if (keepRunning) std::this_thread::sleep_for(std::chrono::milliseconds(150));
@@ -169,11 +171,11 @@ int main(int argc, char **argv) {
   time_t nextStatUpdateTime = std::time(nullptr) - 1;
   time_t nextChipRestTime = nextStatUpdateTime + 1 + loraChipRestIntervalSeconds;
 
-  LoRaPacketTrafficStats_t loraPacketStats;
+  LoRaPacketTrafficStats_t loraPacketStats={};
   LoRaDataPkt_t loraDataPacket;
   uint8_t msg[SX127X_MAX_PACKET_LENGTH];
 
-  std::thread uplinkSender{uplinkPacketSenderWorker};
+  std::thread uplinkSender{uplinkPacketSenderWorker, &loraPacketStats};
   std::thread intubator{appIntubator, argv};
   intubator.detach();
 
