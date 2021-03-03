@@ -107,7 +107,7 @@ to use its **latest** version.
 
 * Compile wiringPi for Orange PI **//for the ZERO model use WiringOP-Zero library instead//** with `./build` command
     * Optionally specify the PLATFORM variable to change the board config (for e.g. for Orange Pi PC: `PLATFORM=orangepipc ./build`) or leave the build script to determine it automatically.
-    * On Armbian and Orange PI Zero you might need to add overlay spi-spidev as well as parameter param_spidev_spi_bus=1 in /boot/armbianEnv.txt (for more info check [https://docs.armbian.com/Hardware_Allwinner_overlays/](https://docs.armbian.com/Hardware_Allwinner_overlays/) and [https://github.com/armbian/sunxi-DT-overlays/blob/master/sun8i-h3/README.sun8i-h3-overlays](https://github.com/armbian/sunxi-DT-overlays/blob/master/sun8i-h3/README.sun8i-h3-overlays)
+    * On Armbian and Orange PI Zero you might need to add overlay spi-spidev as well as parameter param_spidev_spi_bus=1 in /boot/armbianEnv.txt (for more info check [https://docs.armbian.com/User-Guide_Allwinner_overlays/](https://docs.armbian.com/User-Guide_Allwinner_overlays/) and [https://github.com/armbian/sunxi-DT-overlays/blob/master/sun8i-h3/README.sun8i-h3-overlays](https://github.com/armbian/sunxi-DT-overlays/blob/master/sun8i-h3/README.sun8i-h3-overlays)
     * execute `gpio readall` to see the board pinout scheme table
 * Compile this project with `make`
 
