@@ -165,7 +165,7 @@ int main(int argc, char **argv) {
   bool receiveOnAllChannels = cfg.lora_chip_settings.all_spreading_factors;
 
   const uint16_t delayIntervalMs = 20;
-  const uint32_t sendStatPktIntervalSeconds = 420;
+  const uint32_t sendStatPktIntervalSeconds = 60;
   const uint32_t loraChipRestIntervalSeconds = 2700;
 
   time_t nextStatUpdateTime = std::time(nullptr) - 1;
