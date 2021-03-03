@@ -26,10 +26,16 @@
 
   "servers": [
     {
-      "address": "router.eu.thethings.network",
+      "address": "eu1.cloud.thethings.network",
       "port": 1700,
       "recv_timeout_ms": 500,
       "enabled": true
+    },
+    {
+      "address": "router.eu.thethings.network",
+      "port": 1700,
+      "recv_timeout_ms": 500,
+      "enabled": false
     },
     {
       "address": "router.us.thethings.network",
