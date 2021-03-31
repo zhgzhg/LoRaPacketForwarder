@@ -1,7 +1,7 @@
 #include "UdpUtils.h"
 
-static std::queue<PackagedDataToSend> uplink_data_queue;
-static std::timed_mutex g_uplink_data_queue_mutex;
+static std::queue<PackagedDataToSend> uplink_data_queue, downlink_data_queue;
+static std::timed_mutex g_uplink_data_queue_mutex, g_downlink_data_queue_mutex;
 static Server_t NO_SERVER;
 PackagedDataToSend_t NO_PACKAGED_DATA{0UL, 0UL, {}, NO_SERVER};
 
@@ -118,13 +118,23 @@ NetworkConf_t PrepareNetworking(const char* networkInterfaceName, suseconds_t da
   return result;  
 } // }}}
 
-bool RequeuePacket(PackagedDataToSend_t &&packet, uint32_t maxAttempts)
+bool RequeuePacket(PackagedDataToSend_t &&packet, uint32_t maxAttempts, QueueDirection direction)
 {
   if (packet.curr_attempt >= maxAttempts)
   { return false; }
 
-  std::unique_lock<std::timed_mutex> lock(g_uplink_data_queue_mutex,
-                  std::chrono::system_clock::now() + std::chrono::seconds(2));
+  std::unique_lock<std::timed_mutex> lock;
+  if (direction == UP)
+  {
+    lock = std::unique_lock<std::timed_mutex>(g_uplink_data_queue_mutex,
+        std::chrono::system_clock::now() + std::chrono::seconds(2));
+  }
+  else if (direction == DOWN)
+  {
+    lock = std::unique_lock<std::timed_mutex>(g_downlink_data_queue_mutex,
+        std::chrono::system_clock::now() + std::chrono::seconds(2));
+  }
+
   if (!lock.owns_lock())
   {
     printf("Failed to obtain uplink queue lock! Giving up on requeuing the packet!");
@@ -132,17 +142,31 @@ bool RequeuePacket(PackagedDataToSend_t &&packet, uint32_t maxAttempts)
   }
 
   packet.curr_attempt++;
-  uplink_data_queue.push(std::move(packet));
+
+  if (direction == UP)
+  { uplink_data_queue.push(std::move(packet)); }
+  else if (direction == DOWN)
+  { downlink_data_queue.push(std::move(packet)); }
 
   return true;
 }
 
-void EnqueuePacket(uint8_t *data, uint32_t data_length, Server_t& dest) // {{{
+void EnqueuePacket(uint8_t *data, uint32_t data_length, Server_t& dest, QueueDirection direction) // {{{
 {
   if (data == nullptr) return;
 
-  std::unique_lock<std::timed_mutex> lock(g_uplink_data_queue_mutex,
-                  std::chrono::system_clock::now() + std::chrono::seconds(2));
+  std::unique_lock<std::timed_mutex> lock;
+  if (direction == UP)
+  {
+    lock = std::unique_lock<std::timed_mutex>(g_uplink_data_queue_mutex,
+        std::chrono::system_clock::now() + std::chrono::seconds(2));
+  }
+  else if (direction == DOWN)
+  {
+    lock = std::unique_lock<std::timed_mutex>(g_downlink_data_queue_mutex,
+        std::chrono::system_clock::now() + std::chrono::seconds(2));
+  }
+
   if (!lock.owns_lock())
   {
     printf("Failed to obtain uplink queue lock! Giving up on that packet!");
@@ -151,18 +175,44 @@ void EnqueuePacket(uint8_t *data, uint32_t data_length, Server_t& dest) // {{{
 
   PackagedDataToSend_t packaged_data{ 0UL, data_length, data, dest };
 
-  uplink_data_queue.push(std::move(packaged_data));
+  if (direction == UP)
+  { uplink_data_queue.push(std::move(packaged_data)); }
+  else if (direction == DOWN)
+  { downlink_data_queue.push(std::move(packaged_data)); }
 } // }}}
 
-PackagedDataToSend_t DequeuePacket() // {{{
+PackagedDataToSend_t DequeuePacket(QueueDirection direction) // {{{
 {
-  std::unique_lock<std::timed_mutex> lock(g_uplink_data_queue_mutex,
-                  std::chrono::system_clock::now() + std::chrono::seconds(1));
+  std::unique_lock<std::timed_mutex> lock;
+  if (direction == UP)
+  {
+    lock = std::unique_lock<std::timed_mutex>(g_uplink_data_queue_mutex,
+        std::chrono::system_clock::now() + std::chrono::seconds(1));
+  }
+  else if (direction == DOWN)
+  {
+    lock = std::unique_lock<std::timed_mutex>(g_downlink_data_queue_mutex,
+        std::chrono::system_clock::now() + std::chrono::seconds(1));
+  }
 
-  if (!lock.owns_lock() || uplink_data_queue.empty()) return std::move(NO_PACKAGED_DATA);
+  if (!lock.owns_lock() || (direction == UP && uplink_data_queue.empty()) ||
+      (direction == DOWN && downlink_data_queue.empty()))
+  { return std::move(NO_PACKAGED_DATA); }
 
-  PackagedDataToSend_t result = std::move(uplink_data_queue.front());
-  uplink_data_queue.pop();
+  PackagedDataToSend_t result = [&direction]() -> PackagedDataToSend_t {  
+    if (direction == UP)
+    {
+      auto res = std::move(uplink_data_queue.front());
+      uplink_data_queue.pop();
+      return res;
+    }
+    else if (direction == DOWN)
+    {
+      auto res = std::move(downlink_data_queue.front());
+      downlink_data_queue.pop();
+      return res;
+    }
+  }();
 
   lock.unlock();
 
@@ -250,7 +300,7 @@ void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pk
     size_t packet_sz = stat_index + json.size();
     uint8_t *packet = new uint8_t[packet_sz];
     memcpy(packet, status_report, packet_sz);
-    EnqueuePacket(packet, packet_sz, serv);
+    EnqueuePacket(packet, packet_sz, serv, UP);
   }
 
 } // }}}
@@ -366,7 +416,7 @@ void PublishLoRaProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPacket) /
     size_t packet_sz = buff_index + json.size();
     uint8_t *packet = new uint8_t[packet_sz];
     memcpy(packet, buff_up, packet_sz);
-    EnqueuePacket(packet, packet_sz, serv);
+    EnqueuePacket(packet, packet_sz, serv, UP);
   }
 
 } // }}}

@@ -46,9 +46,9 @@ void appIntubator(char* const argv[]) { // {{{
         len = strlen(argv[0]);
         if (len > 0 && len != sizeof(exePath)) {
           strcpy(exePath, argv[0]);
-	} else {
-	  len = 0;
-	}
+        } else {
+          len = 0;
+        }
       }
       exePath[len] = '\0';
 
@@ -74,7 +74,7 @@ void uplinkPacketSenderWorker(LoRaPacketTrafficStats_t *loraPacketStats) { // {{
   bool iterateOnceMore = false;
   do
   {
-    PackagedDataToSend_t packet{DequeuePacket()};
+    PackagedDataToSend_t packet{DequeuePacket(UP)};
     iterateOnceMore = (packet.data_len > 0);
     if (iterateOnceMore)
     {
@@ -87,7 +87,7 @@ void uplinkPacketSenderWorker(LoRaPacketTrafficStats_t *loraPacketStats) { // {{
         char asciiTime[25];
         std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
         printf("(%s) No uplink ACK received from %s\n", asciiTime, packet.destination.address.c_str());
-        if (RequeuePacket(std::move(packet), 4))
+        if (RequeuePacket(std::move(packet), 4, UP))
         { printf("(%s) Requeued the uplink packet.\n",  asciiTime); }
         fflush(stdout);
       }

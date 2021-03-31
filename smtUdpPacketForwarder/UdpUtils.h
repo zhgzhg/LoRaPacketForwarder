@@ -72,15 +72,17 @@ typedef struct PackagedDataToSend
 
 } PackagedDataToSend_t;
 
+enum QueueDirection { UP, DOWN };
+
 void Die(const char *s);
 bool SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_sin);
 bool SendUdp(Server_t &server, char *msg, int length,
              std::function<bool(char*, int, char*, int)> &validator);
 NetworkConf_t PrepareNetworking(const char* networkInterfaceName, suseconds_t dataRecvTimeout, char gatewayId[25]);
 
-void EnqueuePacket(uint8_t *data, uint32_t data_length, Server_t& dest);
-bool RequeuePacket(PackagedDataToSend_t &&packet, uint32_t maxAttempts);
-PackagedDataToSend_t DequeuePacket();
+void EnqueuePacket(uint8_t *data, uint32_t data_length, Server_t& dest, QueueDirection direction);
+bool RequeuePacket(PackagedDataToSend_t &&packet, uint32_t maxAttempts, QueueDirection direction);
+PackagedDataToSend_t DequeuePacket(QueueDirection direction);
 
 
 void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pktStats);
