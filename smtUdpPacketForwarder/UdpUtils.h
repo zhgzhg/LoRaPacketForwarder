@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 #include <queue>
+#include <map>
 #include <functional>
 #include <mutex>
 #include <memory>
@@ -41,8 +42,11 @@
 #define PKT_PULL_DATA 2
 #define PKT_PULL_RESP 3
 #define PKT_PULL_ACK  4
+#define PKT_TX_ACK 5
 
-#define TX_BUFF_UP_SIZE 2048 /* buffer to compose the upstream packet */
+#define TX_BUFF_UP_SIZE 2048     /* buffer to compose the upstream packet */
+#define TX_BUFF_DOWN_REQ_SIZE 12 /* buffer to compose downstream request packet */
+#define RX_BUFF_DOWN_SIZE 2048
 
 #define BASE64_MAX_LENGTH 341
 
@@ -72,20 +76,23 @@ typedef struct PackagedDataToSend
 
 } PackagedDataToSend_t;
 
-enum QueueDirection { UP, DOWN };
+enum Direction { UP_TX, DOWN_TX, DOWN_RX };
 
 void Die(const char *s);
 bool SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_sin);
-bool SendUdp(Server_t &server, char *msg, int length,
+bool SendUdp(Server_t &server, char *msg, int length, Direction direction,
              std::function<bool(char*, int, char*, int)> &validator);
+bool RecvUdp(Server_t &server, char *msg, int size,
+             std::function<bool(char*, int, char*, int*)> &validator);
 NetworkConf_t PrepareNetworking(const char* networkInterfaceName, suseconds_t dataRecvTimeout, char gatewayId[25]);
 
-void EnqueuePacket(uint8_t *data, uint32_t data_length, Server_t& dest, QueueDirection direction);
-bool RequeuePacket(PackagedDataToSend_t &&packet, uint32_t maxAttempts, QueueDirection direction);
-PackagedDataToSend_t DequeuePacket(QueueDirection direction);
+void EnqueuePacket(uint8_t *data, uint32_t data_length, Server_t& dest, Direction direction);
+bool RequeuePacket(PackagedDataToSend_t &&packet, uint32_t maxAttempts, Direction direction);
+PackagedDataToSend_t DequeuePacket(Direction direction);
 
 
 void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pktStats);
-void PublishLoRaProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPacket);
+void PublishLoRaUplinkProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPacket);
+void PublishLoRaDownlinkProtocolPacket(PlatformInfo_t &cfg);
 
 #endif

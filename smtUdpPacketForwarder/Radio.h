@@ -7,6 +7,7 @@
 #include <RadioLib.h>
 #include <PhysicalLayer/PhysicalLayer.h>
 #include "ConfigFileParser.h"
+#include "UdpUtils.h"
 
 
 enum class LoRaRecvStat { NODATA, DATARECV, DATARECVFAIL };
@@ -18,5 +19,7 @@ uint16_t restartLoRaChip(PhysicalLayer *lora, PlatformInfo_t &cfg);
 void hexPrint(uint8_t data[], int length, FILE *dest);
 
 LoRaRecvStat recvLoRaUplinkData(PhysicalLayer *lora, bool receiveOnAllChannels, LoRaDataPkt_t &pkt, uint8_t msg[], LoRaPacketTrafficStats_t &loraPacketStats);
+
+LoRaRecvStat sendLoRaDownlinkData(PhysicalLayer *lora, PackagedDataToSend_t &pkt, LoRaPacketTrafficStats_t &loraPacketStats);
 
 #endif

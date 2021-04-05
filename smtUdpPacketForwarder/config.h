@@ -71,7 +71,8 @@ typedef struct Server {
   std::string address;
   uint16_t port;
   uint32_t receive_timeout_ms;
-  NetworkConf_t network_cfg;
+  NetworkConf_t uplink_network_cfg;
+  NetworkConf_t downlink_network_cfg;
 } Server_t;
 
 typedef struct PlatformInfo {
@@ -96,6 +97,7 @@ typedef struct LoRaPacketTrafficStats {
   uint32_t forw_packets;
   uint32_t forw_packets_crc_good;
   volatile uint32_t acked_forw_packets;
+  volatile uint32_t downlink_recv_packets;
 } LoRaPacketTrafficStats_t;
 
 typedef struct LoRaDataPkt {

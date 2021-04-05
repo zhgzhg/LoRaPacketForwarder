@@ -60,43 +60,88 @@ void appIntubator(char* const argv[]) { // {{{
   }
 } // }}}
 
-void uplinkPacketSenderWorker(LoRaPacketTrafficStats_t *loraPacketStats) { // {{{
+void networkPacketExhangeWorker(LoRaPacketTrafficStats_t *loraPacketStats,
+                                std::vector<Server_t> *servers) { // {{{
 
-  static std::function<bool(char*, int, char*, int)> isValidAck =
-          [](char* origMsg, int origMsgSz, char* respMsg, int respMsgSz) {
-              if (origMsg != nullptr && origMsgSz > 4 && respMsg != nullptr && respMsgSz >= 4) {
-                return origMsg[0] == respMsg[0] && origMsg[1] == respMsg[1] &&
-                         origMsg[2] == respMsg[2] && respMsg[3] == PKT_PUSH_ACK;
-              }
-              return false;
+  static std::function<bool(char*, int, char*, int)> isValidUplinkAck =
+    [](char* origMsg, int origMsgSz, char* respMsg, int respMsgSz) {
+        if (origMsg != nullptr && origMsgSz > 4 && respMsg != nullptr && respMsgSz >= 4) {
+          return origMsg[0] == respMsg[0] && origMsg[1] == respMsg[1] &&
+                    origMsg[2] == respMsg[2] && (respMsg[3] == PKT_PUSH_ACK || respMsg[3] == PKT_PULL_ACK);
+        }
+        return false;
+  };
+  static std::function<bool(char*, int, char*, int*)> isValidDownlinkPkt =
+    [](char *origMsg, int origMsgSz, char* respErrorJsonMsg, int *maxRespErrorJsonMsgSz) {
+        if (origMsg != nullptr && origMsgSz > 15 && origMsg[0] == PROTOCOL_VERSION &&
+            origMsg[3] == PKT_PULL_RESP)
+        {
+          maxRespErrorJsonMsgSz = 0;
+          return true;
+        }
+        else
+        {
+          strncpy(respErrorJsonMsg, "Invalid packet or payload", *maxRespErrorJsonMsgSz);
+          *maxRespErrorJsonMsgSz = strlen(respErrorJsonMsg);
+        }
+
+        return false;
   };
 
-  bool iterateOnceMore = false;
+  struct TxPacket {
+    PackagedDataToSend_t packet;
+    Direction direction;
+
+    TxPacket(PackagedDataToSend_t&& pkt, Direction directn) : packet(std::move(pkt)), direction(directn)
+    { }
+  };
+
+  char downlinkMsg[RX_BUFF_DOWN_SIZE];
+  bool iterateImmediately;
   do
   {
-    PackagedDataToSend_t packet{DequeuePacket(UP)};
-    iterateOnceMore = (packet.data_len > 0);
-    if (iterateOnceMore)
+    iterateImmediately = false;
+    for (auto it = servers->begin(); it != servers->end(); ++it)
     {
-      bool result = SendUdp(packet.destination,
-          reinterpret_cast<char*>(packet.data.get()), packet.data_len, isValidAck);
-
-      if (!result)
+      bool received = RecvUdp(*it, downlinkMsg, sizeof(downlinkMsg), isValidDownlinkPkt);
+      if (received)
       {
-        time_t currTime{std::time(nullptr)};
-        char asciiTime[25];
-        std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
-        printf("(%s) No uplink ACK received from %s\n", asciiTime, packet.destination.address.c_str());
-        if (RequeuePacket(std::move(packet), 4, UP))
-        { printf("(%s) Requeued the uplink packet.\n",  asciiTime); }
-        fflush(stdout);
+        ++(loraPacketStats->downlink_recv_packets);
+        iterateImmediately = true;
       }
-      else
-      { ++(loraPacketStats->acked_forw_packets); }
     }
 
-    if (keepRunning) std::this_thread::sleep_for(std::chrono::milliseconds(150));
-  } while (keepRunning || iterateOnceMore);
+    TxPacket txPackets[] = { TxPacket{DequeuePacket(UP_TX), UP_TX}, TxPacket{DequeuePacket(DOWN_TX), DOWN_TX} };
+
+    for (size_t i = 0; i < sizeof(txPackets) / sizeof(TxPacket); ++i)
+    {
+       PackagedDataToSend_t& packet = txPackets[i].packet;
+       if (packet.data_len > 0)
+       {
+          Direction direction = txPackets[i].direction;
+
+          iterateImmediately = true;
+          bool result = SendUdp(packet.destination, reinterpret_cast<char*>(packet.data.get()),
+                            packet.data_len, direction, isValidUplinkAck);
+
+          if (!result)
+          {
+            time_t currTime{std::time(nullptr)};
+            char asciiTime[25];
+            std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
+            printf("(%s) No %s ACK received from %s\n", asciiTime, (direction == UP ? "uplink" : "downlink"),
+              packet.destination.address.c_str());
+            if (RequeuePacket(std::move(packet), 4, direction))
+            { printf("(%s) Requeued the %s packet.\n", asciiTime, (direction == UP ? "uplink" : "downlink")); }
+            fflush(stdout);
+          }
+          else
+          { ++(loraPacketStats->acked_forw_packets); }
+       }
+    }
+
+    if (!iterateImmediately && keepRunning) std::this_thread::sleep_for(std::chrono::milliseconds(150));
+  } while (keepRunning);
 
 } // }}}
 
@@ -112,14 +157,15 @@ int main(int argc, char **argv) {
   char gatewayId[25];
   memset(gatewayId, 0, sizeof(gatewayId));
 
-  if (argc > 1) {
-    strcpy(networkIfaceName, (const char*) argv[1]);
-  }
+  if (argc > 1)
+  { strcpy(networkIfaceName, (const char*) argv[1]); }
 
   PlatformInfo_t cfg = LoadConfiguration("./config.json");
 
   for (auto &serv : cfg.servers) {
-    serv.network_cfg =
+    serv.uplink_network_cfg =
+       PrepareNetworking(networkIfaceName, serv.receive_timeout_ms * 1000, gatewayId);
+    serv.downlink_network_cfg =
        PrepareNetworking(networkIfaceName, serv.receive_timeout_ms * 1000, gatewayId);
   }
 
@@ -137,7 +183,7 @@ int main(int argc, char **argv) {
   for (uint8_t c = 0; state != ERR_NONE && c < 200; ++c) {
     state = restartLoRaChip(lora, cfg);
 
-    if (state == ERR_NONE) printf("LoRa chip setup succeeded!\n\n");
+    if (state == ERR_NONE) printf("LoRa chip setup succeeded! Waiting for data...\n\n");
     else printf("LoRa chip setup failed, code %d\n", state);
   }
 
@@ -165,7 +211,7 @@ int main(int argc, char **argv) {
   bool receiveOnAllChannels = cfg.lora_chip_settings.all_spreading_factors;
 
   const uint16_t delayIntervalMs = 20;
-  const uint32_t sendStatPktIntervalSeconds = 60;
+  const uint32_t sendStatPktIntervalSeconds = 15;
   const uint32_t loraChipRestIntervalSeconds = 2700;
 
   time_t nextStatUpdateTime = std::time(nullptr) - 1;
@@ -175,7 +221,7 @@ int main(int argc, char **argv) {
   LoRaDataPkt_t loraDataPacket;
   uint8_t msg[SX127X_MAX_PACKET_LENGTH];
 
-  std::thread uplinkSender{uplinkPacketSenderWorker, &loraPacketStats};
+  std::thread packetExchanger{networkPacketExhangeWorker, &loraPacketStats, &cfg.servers};
   std::thread intubator{appIntubator, argv};
   intubator.detach();
 
@@ -185,12 +231,20 @@ int main(int argc, char **argv) {
 
     if (keepRunning && currTime >= nextStatUpdateTime) {
       nextStatUpdateTime = currTime + sendStatPktIntervalSeconds;
-      std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
-      printf("(%s) Sending stat update to server(s)... ", asciiTime);
+      //std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
+      //printf("(%s) Sending stat update to server(s)... ", asciiTime);
       PublishStatProtocolPacket(cfg, loraPacketStats);
       ++loraPacketStats.forw_packets_crc_good;
       ++loraPacketStats.forw_packets;
-      printf("done\n");
+      //printf("done\n");
+      fflush(stdout);
+
+      //std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
+      //printf("(%s) Sending downlink packet keepalive request to server(s)... ", asciiTime);
+      PublishLoRaDownlinkProtocolPacket(cfg);
+      ++loraPacketStats.forw_packets_crc_good;
+      ++loraPacketStats.forw_packets;
+      //printf("done\n");
       fflush(stdout);
     }
 
@@ -200,7 +254,7 @@ int main(int argc, char **argv) {
 		                    lora, receiveOnAllChannels, loraDataPacket, msg, loraPacketStats);
 
     if (lastRecvResult == LoRaRecvStat::DATARECV) {
-      PublishLoRaProtocolPacket(cfg, loraDataPacket);
+      PublishLoRaUplinkProtocolPacket(cfg, loraDataPacket);
     } else if (keepRunning && lastRecvResult == LoRaRecvStat::NODATA) {
 
       if (cfg.lora_chip_settings.pin_rest > -1 && currTime >= nextChipRestTime) {
@@ -219,6 +273,11 @@ int main(int argc, char **argv) {
         delay(delayIntervalMs);
       }
 
+      PackagedDataToSend_t downlinkPacket{DequeuePacket(DOWN_RX)};
+      if (downlinkPacket.data_len > 0)
+      {
+        sendLoRaDownlinkData(lora, downlinkPacket, loraPacketStats);
+      }
     }
 
   }
@@ -229,5 +288,5 @@ int main(int argc, char **argv) {
   printf("\n(%s) Shutting down...\n", asciiTime);
   fflush(stdout);
   SPI.endTransaction();
-  uplinkSender.join();
+  packetExchanger.join();
 }

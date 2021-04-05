@@ -5,6 +5,8 @@
 #include <string>
 #include <typeinfo>
 
+#include "rapidjson/document.h"
+#include "rapidjson/stringbuffer.h"
 
 void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
   if (length < 1) {
@@ -207,7 +209,7 @@ LoRaRecvStat recvLoRaUplinkData(PhysicalLayer *lora,bool receiveOnAllChannels, L
     ++loraPacketStats.recv_packets;
     ++loraPacketStats.recv_packets_crc_good;
 
-    printf("\n(%s) Received packet:\n", asciiTime);
+    printf("\n(%s) Received UPlink packet:\n", asciiTime);
     printf(" RSSI:\t\t\t%.1f dBm\n", pkt.RSSI);
     printf(" SNR:\t\t\t%f dB\n", pkt.SNR);
     printf(" Frequency error:\t%f Hz\n", freqErr);
@@ -233,3 +235,50 @@ LoRaRecvStat recvLoRaUplinkData(PhysicalLayer *lora,bool receiveOnAllChannels, L
 
   return (insistDataReceiveFailure ? LoRaRecvStat::DATARECVFAIL : LoRaRecvStat::NODATA);
 } // }}}
+
+struct DownlinkPacket
+{
+  bool send_immediately;
+
+  std::time_t unix_epoch_timestamp;
+  unsigned long long  gps_timestamp;
+
+  unsigned long concentrator_rf_chain;
+  float output_power_dbm;
+  SpreadingFactor_t spreading_factor;
+  float carrier_frequency_mhz;
+  float bandwidth_khz;
+  CodingRate_t coding_rate;
+  unsigned char preamble_size;
+
+  unsigned fsk_datarate_bps;
+  unsigned long fsk_freq_deviation_hz;
+
+  bool iq_polatization_inversion;
+
+  unsigned long payload_size;
+  std::string payload_base64_enc;
+
+  bool disable_crc;
+};
+
+void downlinkTxJsonToPacket(PackagedDataToSend_t &pkt)
+{
+    rapidjson::Document doc;
+    doc.Parse(reinterpret_cast<const char*>(pkt.data.get()));
+    // TODO
+}
+
+LoRaRecvStat sendLoRaDownlinkData(PhysicalLayer *lora, PackagedDataToSend_t &pkt, LoRaPacketTrafficStats_t &loraPacketStats) // {{{
+{
+  time_t timestamp{std::time(nullptr)};
+  char asciiTime[25];
+  std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&timestamp));
+
+  printf("\n(%s) Received DOWNlink packet:\n", asciiTime);
+  hexPrint(pkt.data.get(), pkt.data_len, stdout);
+
+  // TODO  
+
+  return LoRaRecvStat::DATARECVFAIL;
+}  //}}}

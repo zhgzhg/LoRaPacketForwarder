@@ -1,7 +1,19 @@
 #include "UdpUtils.h"
 
-static std::queue<PackagedDataToSend> uplink_data_queue, downlink_data_queue;
-static std::timed_mutex g_uplink_data_queue_mutex, g_downlink_data_queue_mutex;
+static std::queue<PackagedDataToSend> uplink_data_queue, downlink_tx_data_queue, downlink_recv_data_queue;
+static std::timed_mutex g_uplink_data_queue_mutex, g_downlink_tx_data_queue_mutex, g_downlink_rx_data_queue_mutex;
+
+static const std::map<Direction, std::queue<PackagedDataToSend>&> direction_to_queue = {
+  { UP_TX, uplink_data_queue },
+  { DOWN_TX, downlink_tx_data_queue },
+  { DOWN_RX, downlink_recv_data_queue }
+};
+static const std::map<Direction, std::timed_mutex&> direction_to_mutex = {
+  { UP_TX, g_uplink_data_queue_mutex },
+  { DOWN_TX, g_downlink_tx_data_queue_mutex },
+  { DOWN_RX, g_downlink_rx_data_queue_mutex }
+};
+
 static Server_t NO_SERVER;
 PackagedDataToSend_t NO_PACKAGED_DATA{0UL, 0UL, {}, NO_SERVER};
 
@@ -10,7 +22,6 @@ void Die(const char *s) // {{{
   perror(s);
   exit(1);
 } // }}}
-
 
 bool SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_sin) // {{{
 {
@@ -43,10 +54,71 @@ bool SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_
   return true;
 } // }}}
 
-bool SendUdp(Server_t &server, char *msg, int length,
+bool RecvUdp(Server_t &server, char *msg, int size,
+             std::function<bool(char*, int, char*, int*)> &validator) // {{{
+{
+  NetworkConf_t &networkConf = server.downlink_network_cfg;
+
+  networkConf.si_other.sin_port = htons(server.port);
+
+  if (!SolveHostname(server.address.c_str(), server.port, &networkConf.si_other))
+  { return false; }
+
+  for (int i = 0; i < 2; ++i)
+  {
+    int j = recv(networkConf.socket, msg, size, 0);
+    if (j == -1)
+    {
+      if (errno == EAGAIN) continue; // timeout
+      else return false;
+    }
+
+    uint8_t ack[12 + 22 + 219]= { PROTOCOL_VERSION, msg[1], msg[2], PKT_TX_ACK,
+        (uint8_t)networkConf.ifr.ifr_hwaddr.sa_data[0],
+        (uint8_t)networkConf.ifr.ifr_hwaddr.sa_data[1],
+        (uint8_t)networkConf.ifr.ifr_hwaddr.sa_data[2],
+        0xFF, 0xFF,
+        (uint8_t)networkConf.ifr.ifr_hwaddr.sa_data[3],
+        (uint8_t)networkConf.ifr.ifr_hwaddr.sa_data[4],
+        (uint8_t)networkConf.ifr.ifr_hwaddr.sa_data[5],
+        // {"txpk_ack":{"error":"
+        '{', '"', 't', 'x', 'p', 'k', '_', 'a', 'c', 'k', '"', ':', '{',
+        '"', 'e', 'r', 'r', 'o', 'r', '"', ':', '"'
+    };
+
+    int jsonResponseSize = 219;
+
+    if (validator(msg, j, (char*)(ack + 12 + 22), &jsonResponseSize))
+    {
+      sendto(networkConf.socket, ack, 12, 0, (struct sockaddr *) &networkConf.si_other,
+          sizeof(networkConf.si_other));
+
+      uint8_t *packet = new uint8_t[j - 3];
+      memcpy(packet, msg + 4, j - 4);
+      packet[j - 4] = '\0';
+      EnqueuePacket(packet, j - 4, server, DOWN_RX);
+
+      return true;
+    }
+    else
+    {
+      jsonResponseSize += (12 + 22);
+      ack[jsonResponseSize++] = '"';
+      ack[jsonResponseSize++] = '}';
+      ack[jsonResponseSize++] = '}';
+
+      sendto(networkConf.socket, ack, jsonResponseSize, 0,
+          (struct sockaddr *) &networkConf.si_other, sizeof(networkConf.si_other));
+    }
+  }
+
+  return false;
+} // }}}
+
+bool SendUdp(Server_t &server, char *msg, int length, Direction direction,
              std::function<bool(char*, int, char*, int)> &validator) // {{{
 {
-  NetworkConf_t &networkConf = server.network_cfg;
+  NetworkConf_t &networkConf = (direction == UP_TX ? server.uplink_network_cfg : server.downlink_network_cfg);
 
   networkConf.si_other.sin_port = htons(server.port);
  
@@ -65,7 +137,7 @@ bool SendUdp(Server_t &server, char *msg, int length,
     if (j == -1) {
       if (errno == EAGAIN) continue; // timeout
       else return false; // server connection error
-    } 
+    }
   }
 
   return validator(msg, length, resp, sizeof(resp));
@@ -118,22 +190,15 @@ NetworkConf_t PrepareNetworking(const char* networkInterfaceName, suseconds_t da
   return result;  
 } // }}}
 
-bool RequeuePacket(PackagedDataToSend_t &&packet, uint32_t maxAttempts, QueueDirection direction)
+bool RequeuePacket(PackagedDataToSend_t &&packet, uint32_t maxAttempts, Direction direction)
 {
   if (packet.curr_attempt >= maxAttempts)
   { return false; }
 
-  std::unique_lock<std::timed_mutex> lock;
-  if (direction == UP)
-  {
-    lock = std::unique_lock<std::timed_mutex>(g_uplink_data_queue_mutex,
-        std::chrono::system_clock::now() + std::chrono::seconds(2));
-  }
-  else if (direction == DOWN)
-  {
-    lock = std::unique_lock<std::timed_mutex>(g_downlink_data_queue_mutex,
-        std::chrono::system_clock::now() + std::chrono::seconds(2));
-  }
+  std::unique_lock<std::timed_mutex> lock = std::unique_lock<std::timed_mutex>(
+    direction_to_mutex.at(direction),
+    std::chrono::system_clock::now() + std::chrono::seconds(2)
+  );
 
   if (!lock.owns_lock())
   {
@@ -142,30 +207,19 @@ bool RequeuePacket(PackagedDataToSend_t &&packet, uint32_t maxAttempts, QueueDir
   }
 
   packet.curr_attempt++;
-
-  if (direction == UP)
-  { uplink_data_queue.push(std::move(packet)); }
-  else if (direction == DOWN)
-  { downlink_data_queue.push(std::move(packet)); }
+  direction_to_queue.at(direction).push(std::move(packet));
 
   return true;
 }
 
-void EnqueuePacket(uint8_t *data, uint32_t data_length, Server_t& dest, QueueDirection direction) // {{{
+void EnqueuePacket(uint8_t *data, uint32_t data_length, Server_t& dest, Direction direction) // {{{
 {
   if (data == nullptr) return;
 
-  std::unique_lock<std::timed_mutex> lock;
-  if (direction == UP)
-  {
-    lock = std::unique_lock<std::timed_mutex>(g_uplink_data_queue_mutex,
-        std::chrono::system_clock::now() + std::chrono::seconds(2));
-  }
-  else if (direction == DOWN)
-  {
-    lock = std::unique_lock<std::timed_mutex>(g_downlink_data_queue_mutex,
-        std::chrono::system_clock::now() + std::chrono::seconds(2));
-  }
+  std::unique_lock<std::timed_mutex> lock = std::unique_lock<std::timed_mutex>(
+    direction_to_mutex.at(direction),
+    std::chrono::system_clock::now() + std::chrono::seconds(2)
+  );
 
   if (!lock.owns_lock())
   {
@@ -174,45 +228,24 @@ void EnqueuePacket(uint8_t *data, uint32_t data_length, Server_t& dest, QueueDir
   }
 
   PackagedDataToSend_t packaged_data{ 0UL, data_length, data, dest };
-
-  if (direction == UP)
-  { uplink_data_queue.push(std::move(packaged_data)); }
-  else if (direction == DOWN)
-  { downlink_data_queue.push(std::move(packaged_data)); }
+  direction_to_queue.at(direction).push(std::move(packaged_data));
 } // }}}
 
-PackagedDataToSend_t DequeuePacket(QueueDirection direction) // {{{
+PackagedDataToSend_t DequeuePacket(Direction direction) // {{{
 {
-  std::unique_lock<std::timed_mutex> lock;
-  if (direction == UP)
-  {
-    lock = std::unique_lock<std::timed_mutex>(g_uplink_data_queue_mutex,
-        std::chrono::system_clock::now() + std::chrono::seconds(1));
-  }
-  else if (direction == DOWN)
-  {
-    lock = std::unique_lock<std::timed_mutex>(g_downlink_data_queue_mutex,
-        std::chrono::system_clock::now() + std::chrono::seconds(1));
-  }
+  std::unique_lock<std::timed_mutex> lock = std::unique_lock<std::timed_mutex>(
+    direction_to_mutex.at(direction),
+    std::chrono::system_clock::now() + std::chrono::seconds(1)
+  );
 
-  if (!lock.owns_lock() || (direction == UP && uplink_data_queue.empty()) ||
-      (direction == DOWN && downlink_data_queue.empty()))
+  if (!lock.owns_lock() || direction_to_queue.at(direction).empty())
   { return std::move(NO_PACKAGED_DATA); }
 
-  PackagedDataToSend_t result = [&direction]() -> PackagedDataToSend_t {  
-    if (direction == UP)
-    {
-      auto res = std::move(uplink_data_queue.front());
-      uplink_data_queue.pop();
+  PackagedDataToSend_t result = [](std::queue<PackagedDataToSend>& queue) -> PackagedDataToSend_t {      
+      auto res = std::move(queue.front());
+      queue.pop();
       return res;
-    }
-    else if (direction == DOWN)
-    {
-      auto res = std::move(downlink_data_queue.front());
-      downlink_data_queue.pop();
-      return res;
-    }
-  }();
+  }(direction_to_queue.at(direction));
 
   lock.unlock();
 
@@ -266,7 +299,7 @@ void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pk
   writer.String("ackr");
   writer.Double((pktStats.acked_forw_packets / (pktStats.forw_packets > 0 ? pktStats.forw_packets : 1)) * 100.0);
   writer.String("dwnb");
-  writer.Uint(0);
+  writer.Uint(pktStats.downlink_recv_packets);
   writer.String("txnb");
   writer.Uint(pktStats.forw_packets_crc_good); // not optimal
 
@@ -288,24 +321,24 @@ void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pk
   memcpy(status_report + 12, json.c_str(), json.size());
 
   for (Server_t &serv : cfg.servers) {
-    status_report[4] = (unsigned char)serv.network_cfg.ifr.ifr_hwaddr.sa_data[0];
-    status_report[5] = (unsigned char)serv.network_cfg.ifr.ifr_hwaddr.sa_data[1];
-    status_report[6] = (unsigned char)serv.network_cfg.ifr.ifr_hwaddr.sa_data[2];
+    status_report[4] = (unsigned char)serv.uplink_network_cfg.ifr.ifr_hwaddr.sa_data[0];
+    status_report[5] = (unsigned char)serv.uplink_network_cfg.ifr.ifr_hwaddr.sa_data[1];
+    status_report[6] = (unsigned char)serv.uplink_network_cfg.ifr.ifr_hwaddr.sa_data[2];
     status_report[7] = 0xFF;
     status_report[8] = 0xFF;
-    status_report[9] = (unsigned char)serv.network_cfg.ifr.ifr_hwaddr.sa_data[3];
-    status_report[10] = (unsigned char)serv.network_cfg.ifr.ifr_hwaddr.sa_data[4];
-    status_report[11] = (unsigned char)serv.network_cfg.ifr.ifr_hwaddr.sa_data[5];
+    status_report[9] = (unsigned char)serv.uplink_network_cfg.ifr.ifr_hwaddr.sa_data[3];
+    status_report[10] = (unsigned char)serv.uplink_network_cfg.ifr.ifr_hwaddr.sa_data[4];
+    status_report[11] = (unsigned char)serv.uplink_network_cfg.ifr.ifr_hwaddr.sa_data[5];
 
     size_t packet_sz = stat_index + json.size();
     uint8_t *packet = new uint8_t[packet_sz];
     memcpy(packet, status_report, packet_sz);
-    EnqueuePacket(packet, packet_sz, serv, UP);
+    EnqueuePacket(packet, packet_sz, serv, UP_TX);
   }
 
 } // }}}
 
-void PublishLoRaProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPacket) // {{{
+void PublishLoRaUplinkProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPacket) // {{{
 {
   // see https://github.com/Lora-net/packet_forwarder/blob/master/PROTOCOL.TXT
 
@@ -404,19 +437,55 @@ void PublishLoRaProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPacket) /
 
   memcpy(buff_up + 12, json.c_str(), json.size());
   for (Server_t &serv : cfg.servers) {
-    buff_up[4] = (uint8_t)serv.network_cfg.ifr.ifr_hwaddr.sa_data[0];
-    buff_up[5] = (uint8_t)serv.network_cfg.ifr.ifr_hwaddr.sa_data[1];
-    buff_up[6] = (uint8_t)serv.network_cfg.ifr.ifr_hwaddr.sa_data[2]; 
+    buff_up[4] = (uint8_t)serv.uplink_network_cfg.ifr.ifr_hwaddr.sa_data[0];
+    buff_up[5] = (uint8_t)serv.uplink_network_cfg.ifr.ifr_hwaddr.sa_data[1];
+    buff_up[6] = (uint8_t)serv.uplink_network_cfg.ifr.ifr_hwaddr.sa_data[2]; 
     buff_up[7] = 0xFF;
     buff_up[8] = 0xFF;
-    buff_up[9] = (uint8_t)serv.network_cfg.ifr.ifr_hwaddr.sa_data[3];
-    buff_up[10] = (uint8_t)serv.network_cfg.ifr.ifr_hwaddr.sa_data[4];
-    buff_up[11] = (uint8_t)serv.network_cfg.ifr.ifr_hwaddr.sa_data[5];
+    buff_up[9] = (uint8_t)serv.uplink_network_cfg.ifr.ifr_hwaddr.sa_data[3];
+    buff_up[10] = (uint8_t)serv.uplink_network_cfg.ifr.ifr_hwaddr.sa_data[4];
+    buff_up[11] = (uint8_t)serv.uplink_network_cfg.ifr.ifr_hwaddr.sa_data[5];
 
     size_t packet_sz = buff_index + json.size();
     uint8_t *packet = new uint8_t[packet_sz];
     memcpy(packet, buff_up, packet_sz);
-    EnqueuePacket(packet, packet_sz, serv, UP);
+    EnqueuePacket(packet, packet_sz, serv, UP_TX);
   }
 
+} // }}}
+
+void PublishLoRaDownlinkProtocolPacket(PlatformInfo_t &cfg) // {{{
+{
+  // see https://github.com/Lora-net/packet_forwarder/blob/master/PROTOCOL.TXT
+  char buff_up[TX_BUFF_DOWN_REQ_SIZE]; /* buffer to compose the downstream request packet */
+
+  buff_up[0] = PROTOCOL_VERSION;
+  buff_up[3] = PKT_PULL_DATA;
+
+  /* process some of the configuration variables */
+  //net_mac_h = htonl((uint32_t)(0xFFFFFFFF & (lgwm>>32)));
+  //net_mac_l = htonl((uint32_t)(0xFFFFFFFF &  lgwm  ));
+  //*(uint32_t *)(buff_up + 4) = net_mac_h; 
+  //*(uint32_t *)(buff_up + 8) = net_mac_l;
+
+  /* start composing datagram with the header */
+  uint8_t token_h = (uint8_t)rand(); /* random token */
+  uint8_t token_l = (uint8_t)rand(); /* random token */
+  buff_up[1] = token_h;
+  buff_up[2] = token_l;
+
+  for (Server_t &serv : cfg.servers) {
+    buff_up[4] = (uint8_t)serv.downlink_network_cfg.ifr.ifr_hwaddr.sa_data[0];
+    buff_up[5] = (uint8_t)serv.downlink_network_cfg.ifr.ifr_hwaddr.sa_data[1];
+    buff_up[6] = (uint8_t)serv.downlink_network_cfg.ifr.ifr_hwaddr.sa_data[2]; 
+    buff_up[7] = 0xFF;
+    buff_up[8] = 0xFF;
+    buff_up[9] = (uint8_t)serv.downlink_network_cfg.ifr.ifr_hwaddr.sa_data[3];
+    buff_up[10] = (uint8_t)serv.downlink_network_cfg.ifr.ifr_hwaddr.sa_data[4];
+    buff_up[11] = (uint8_t)serv.downlink_network_cfg.ifr.ifr_hwaddr.sa_data[5];
+
+    uint8_t *packet = new uint8_t[sizeof(buff_up)];
+    memcpy(packet, buff_up, sizeof(buff_up));
+    EnqueuePacket(packet, sizeof(buff_up), serv, DOWN_TX);
+  }
 } // }}}
