@@ -1,4 +1,5 @@
 #include "UdpUtils.h"
+#include "TimeUtils.h"
 
 static std::queue<PackagedDataToSend> uplink_data_queue, downlink_tx_data_queue, downlink_recv_data_queue;
 static std::timed_mutex g_uplink_data_queue_mutex, g_downlink_tx_data_queue_mutex, g_downlink_rx_data_queue_mutex;
@@ -369,11 +370,11 @@ void PublishLoRaUplinkProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPac
   // TODO: tmst can jump is time is (re)set, not good.
   struct timeval now;
   gettimeofday(&now, NULL);
-
-  uint32_t tmst = (uint32_t)(now.tv_sec * 1000000 + now.tv_usec);
+  //uint32_t tmst = (uint32_t)(now.tv_sec * 1000000 + now.tv_usec);
+  uint32_t tmst = micros(); // counter since wiringPiSetup was called
 
   // unix epoch in seconds ts to GPS timestamp in millis
-  uint64_t tmms = std::round( (unix2gps(now.tv_sec) * 1000.0) + (now.tv_usec / 1000) );
+  uint64_t tmms = std::round( (unix2gps(now.tv_sec, false) * 1000.0) + (now.tv_usec / 1000) );
 
   char compact_iso8610_time[28];
   strftime(compact_iso8610_time, sizeof compact_iso8610_time, "%FT%T", gmtime(&now.tv_sec));
