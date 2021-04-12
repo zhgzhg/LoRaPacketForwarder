@@ -129,10 +129,10 @@ void networkPacketExhangeWorker(LoRaPacketTrafficStats_t *loraPacketStats,
             time_t currTime{std::time(nullptr)};
             char asciiTime[25];
             std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
-            printf("(%s) No %s ACK received from %s\n", asciiTime, (direction == UP_TX ? "uplink" : "downlink"),
+            printf("(%s) No %s ACK received from %s\n", asciiTime, (direction == UP_TX ? "uplink" : "downlink fetch request"),
               packet.destination.address.c_str());
             if (RequeuePacket(std::move(packet), 4, direction))
-            { printf("(%s) Requeued the %s packet.\n", asciiTime, (direction == UP_TX ? "uplink" : "downlink")); }
+            { printf("(%s) Requeued the %s packet.\n", asciiTime, (direction == UP_TX ? "uplink" : "downlink fetch request")); }
             fflush(stdout);
           }
           else
