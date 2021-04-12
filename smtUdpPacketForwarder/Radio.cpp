@@ -1,12 +1,17 @@
 #include "Radio.h"
+#include "TimeUtils.h"
 
+#include <ctime>
 #include <functional>
 #include <map>
 #include <string>
 #include <typeinfo>
+#include <cstdarg>
 
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
+#include "gpsTimestampUtils/GpsTimestampUtils.h"
+#include "base64/base64.h"
 
 void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
   if (length < 1) {
@@ -172,6 +177,20 @@ if (!is_matched && lora_type == typeid(origin_class)) { \
 	} \
 }
 
+static void logMessage(const char *format, ...) {
+  time_t timestamp{std::time(nullptr)};
+  char asciiTime[25];
+  std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&timestamp));
+  printf("(%s) ", asciiTime);
+
+  va_list argptr;
+  va_start(argptr, format);
+  vprintf(format, argptr);
+  va_end(argptr);
+
+  fflush(stdout);
+}
+
 LoRaRecvStat recvLoRaUplinkData(PhysicalLayer *lora,bool receiveOnAllChannels, LoRaDataPkt_t &pkt,
                                 uint8_t msg[], LoRaPacketTrafficStats_t &loraPacketStats) { // {{{
 
@@ -209,11 +228,13 @@ LoRaRecvStat recvLoRaUplinkData(PhysicalLayer *lora,bool receiveOnAllChannels, L
     ++loraPacketStats.recv_packets;
     ++loraPacketStats.recv_packets_crc_good;
 
-    printf("\n(%s) Received UPlink packet:\n", asciiTime);
-    printf(" RSSI:\t\t\t%.1f dBm\n", pkt.RSSI);
-    printf(" SNR:\t\t\t%f dB\n", pkt.SNR);
-    printf(" Frequency error:\t%f Hz\n", freqErr);
-    printf(" Data:\t\t\t%d bytes\n\n", msg_length);
+    const char *pktRecvStats = "Received UPlink packet:\n" \
+      " RSSI:\t\t\t%.1f dBm\n" \
+      " SNR:\t\t\t%f dB\n" \
+      " Frequency error:\t%f Hz\n" \
+      " Data:\t\t\t%d bytes\n\n";
+
+    logMessage(pktRecvStats, pkt.RSSI, pkt.SNR, freqErr, msg_length);
     hexPrint(msg, msg_length, stdout);
 
     pkt.msg = static_cast<const uint8_t*> (msg);
@@ -223,62 +244,165 @@ LoRaRecvStat recvLoRaUplinkData(PhysicalLayer *lora,bool receiveOnAllChannels, L
 
   } else if (state == ERR_CRC_MISMATCH) {
     // packet was received, but is malformed
-    time_t timestamp{std::time(nullptr)};
-    char asciiTime[25];
-    std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&timestamp));
 
     ++loraPacketStats.recv_packets;
-    printf("(%s) Received packet CRC error - ignored!\n", asciiTime);
-    fflush(stdout);
+    logMessage("Received UPlink packet with CRC error - ignored!\n");
     return LoRaRecvStat::DATARECVFAIL;
   }
 
   return (insistDataReceiveFailure ? LoRaRecvStat::DATARECVFAIL : LoRaRecvStat::NODATA);
 } // }}}
 
-struct DownlinkPacket
+static struct DownlinkPacket
 {
-  bool send_immediately;
+  bool initialised = false;
 
+  bool send_immediately;
   std::time_t unix_epoch_timestamp;
-  unsigned long long  gps_timestamp;
 
   unsigned long concentrator_rf_chain;
-  float output_power_dbm;
-  SpreadingFactor_t spreading_factor;
-  float carrier_frequency_mhz;
-  float bandwidth_khz;
-  CodingRate_t coding_rate;
-  unsigned char preamble_size;
+  float output_power_dbm = 0;
+  SpreadingFactor_t spreading_factor = SpreadingFactor_t::SF_ALL;
+  float carrier_frequency_mhz = 0;
+  float bandwidth_khz = 0;
+  CodingRate_t coding_rate = CodingRate_t::CR_MIN;
+  unsigned char preamble_length = 8;
 
-  unsigned fsk_datarate_bps;
-  unsigned long fsk_freq_deviation_hz;
+  unsigned long fsk_datarate_bps = 0;
+  unsigned long fsk_freq_deviation_hz = 0;
 
-  bool iq_polatization_inversion;
+  bool iq_polatization_inversion = false;
 
-  unsigned long payload_size;
-  std::string payload_base64_enc;
+  unsigned long payload_size = 0;
+  unsigned char payload[255];
 
-  bool disable_crc;
-};
+  bool disable_crc = true;
+} NO_DP_DATA;
 
-void downlinkTxJsonToPacket(PackagedDataToSend_t &pkt)
-{
+static DownlinkPacket downlinkTxJsonToPacket(PackagedDataToSend_t &pkt) {
     rapidjson::Document doc;
     doc.Parse(reinterpret_cast<const char*>(pkt.data.get()));
-    // TODO
+    if (doc.HasParseError()) {
+      logMessage("Failed to parse the JSON payload!\n");
+      return NO_DP_DATA;
+    }
+
+    if (!doc.IsObject() || !doc.HasMember("txpk") || !doc["txpk"].IsObject()) {
+      logMessage("No txpk recognized!\n");
+      return NO_DP_DATA;
+    }
+
+    DownlinkPacket result;
+
+    const rapidjson::Value& txpkt = doc["txpk"].GetObject();
+    result.send_immediately = (txpkt.HasMember("imme") ? txpkt["imme"].GetBool() : false);
+    if (!result.send_immediately && (txpkt.HasMember("tmst") || txpkt.HasMember("tmms"))) {
+      time_t now{std::time(nullptr)};
+      if (txpkt.HasMember("tmst")) {
+        result.unix_epoch_timestamp = now + (txpkt["tmst"].GetUint() - micros());
+      } else {
+        result.unix_epoch_timestamp = static_cast<std::time_t>(gps2unix(txpkt["tmms"].GetDouble(), false));
+      }
+
+      if (result.unix_epoch_timestamp > now + (24 * 3600) || result.unix_epoch_timestamp > now) {
+        logMessage("Invalid time scheduled - %llu!\n", result.unix_epoch_timestamp);
+        return NO_DP_DATA;
+      }
+    } else {
+      logMessage("Missing tx schedule!\n");
+      return NO_DP_DATA;
+    }
+
+    if (!txpkt.HasMember("modu")) {
+      logMessage("Missing tx modulation information!\n");
+      return NO_DP_DATA;
+    }
+    if (!txpkt.HasMember("datr")) {
+      logMessage("Missing tx data rate information!\n");
+    }
+
+    if (txpkt.HasMember("freq"))
+    { result.carrier_frequency_mhz = static_cast<float>(txpkt["freq"].GetDouble()); }
+    if (txpkt.HasMember("rfch"))
+    { result.concentrator_rf_chain = txpkt["rfch"].GetUint(); }
+    if (txpkt.HasMember("powe"))
+    { result.output_power_dbm = static_cast<float>(txpkt["powe"].GetDouble()); }
+
+    bool isLoraModulation = (strcmp(txpkt["modu"].GetString(), "LORA") == 0 &&
+        txpkt["datr"].IsString() && txpkt.HasMember("codr"));
+    if (isLoraModulation) {
+      int sf = 0;
+      float bw = 0;
+
+      if (sscanf(txpkt["datr"].GetString(), "%*[SF]%d%*[BW]%f", &sf, &bw) < 2 ||
+          sf < SF_MIN || sf > SF_MAX || bw < 1.0F || bw > 500.0F) {
+        logMessage("Invalid SF or BW!\n");
+        return NO_DP_DATA;
+      }
+      result.spreading_factor = static_cast<SpreadingFactor_t>(sf);
+      result.bandwidth_khz = bw;
+
+      int cr = 0;
+      if (sscanf(txpkt["codr"].GetString(), "%*[4/]%d", &cr) < 1 ||
+          cr < CodingRate_t::CR_MIN || cr > CodingRate_t::CR_MAX) {
+        logMessage("Invalid codr!\n");
+        return NO_DP_DATA;
+      }
+      result.coding_rate = static_cast<CodingRate_t>(cr);
+
+      if (txpkt.HasMember("ipol")) {
+        result.iq_polatization_inversion = txpkt["ipol"].GetBool();
+      }
+
+    } else if (txpkt["datr"].IsNumber() && txpkt.HasMember("fdev")) {
+      result.fsk_datarate_bps = txpkt["datr"].GetUint();
+      result.fsk_freq_deviation_hz = txpkt["fdev"].GetUint();
+    } else {
+      logMessage("Invalid data rate / frequency deviation for the specified modulation!\n");
+      return NO_DP_DATA;
+    }
+
+    if (txpkt.HasMember("prea")) {
+        int preamble = txpkt["prea"].GetUint();
+        if (preamble > 0 && preamble < 256) {
+          result.preamble_length = static_cast<unsigned char>(preamble);
+        } else {
+          logMessage("Invalid preamble length!\n");
+          return NO_DP_DATA;
+        }
+    }
+
+    if (txpkt.HasMember("size")) {
+      result.payload_size = txpkt["size"].GetUint();
+      if (result.payload_size > 255) {
+        logMessage("Invalid payload size!\n");
+        return NO_DP_DATA;
+      }
+    }
+
+    if (txpkt.HasMember("data")) {
+      b64_to_bin(txpkt["data"].GetString(), result.payload_size, result.payload, 255);
+    }
+
+    if (txpkt.HasMember("ncrc")) {
+      result.disable_crc = txpkt["ncrc"].GetBool();
+    }
+
+
+    result.initialised = true;
+    return result;
 }
 
 LoRaRecvStat sendLoRaDownlinkData(PhysicalLayer *lora, PackagedDataToSend_t &pkt, LoRaPacketTrafficStats_t &loraPacketStats) // {{{
 {
-  time_t timestamp{std::time(nullptr)};
-  char asciiTime[25];
-  std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&timestamp));
-
-  printf("\n(%s) Received DOWNlink packet:\n", asciiTime);
+  logMessage("Received DOWNlink packet:\n");
   hexPrint(pkt.data.get(), pkt.data_len, stdout);
 
-  // TODO  
+  DownlinkPacket converted = downlinkTxJsonToPacket(pkt);
+  if (!converted.initialised)
+  { return LoRaRecvStat::DATARECVFAIL; }
+
+  // TODO sending
 
   return LoRaRecvStat::DATARECVFAIL;
 }  //}}}
