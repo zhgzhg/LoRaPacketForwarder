@@ -1,5 +1,7 @@
 #include "UdpUtils.h"
 #include "TimeUtils.h"
+#include <string>
+#include <utility>
 
 static std::queue<PackagedDataToSend> uplink_data_queue, downlink_tx_data_queue, downlink_recv_data_queue;
 static std::timed_mutex g_uplink_data_queue_mutex, g_downlink_tx_data_queue_mutex, g_downlink_rx_data_queue_mutex;
@@ -18,6 +20,8 @@ static const std::map<Direction, std::timed_mutex&> direction_to_mutex = {
 static Server_t NO_SERVER;
 PackagedDataToSend_t NO_PACKAGED_DATA{0UL, 0UL, {}, NO_SERVER};
 
+static std::map<std::string, std::pair<time_t, struct in_addr> > hostname_cache;
+
 void Die(const char *s) // {{{
 {
   perror(s);
@@ -26,6 +30,13 @@ void Die(const char *s) // {{{
 
 bool SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_sin) // {{{
 {
+  auto iterator = hostname_cache.find(p_hostname);
+  if (iterator != hostname_cache.end() && iterator->second.first < std::time(nullptr))
+  {
+     p_sin->sin_addr = iterator->second.second;
+     return true;
+  }
+
   struct addrinfo hints;
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family = AF_INET;
@@ -49,6 +60,7 @@ bool SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_
     struct sockaddr_in* p_saddr = (struct sockaddr_in*)p_rp->ai_addr;
     //printf("%s solved to %s\n", p_hostname, inet_ntoa(p_saddr->sin_addr));
     p_sin->sin_addr = p_saddr->sin_addr;
+    hostname_cache[p_hostname] = std::make_pair(std::time(nullptr) + 300, p_saddr->sin_addr);
   }
 
   freeaddrinfo(p_result);
