@@ -125,7 +125,7 @@ PhysicalLayer* instantiateLoRaChip(LoRaChipSettings_t& lora_chip_settings, SPICl
 #define PKT_ENRICHER(origin_class, instance_ptr, inst_type_info, lora_packet, freq_err) \
 if (inst_type_info == typeid(origin_class)) { \
 	origin_class *inst = static_cast<origin_class*>(instance_ptr); \
-	lora_packet.RSSI = inst->getRSSI(); \
+	lora_packet.RSSI = inst->getRSSI(true); \
 	lora_packet.SNR = inst->getSNR(); \
 	freq_err = inst->getFrequencyError(); \
 	return; \
