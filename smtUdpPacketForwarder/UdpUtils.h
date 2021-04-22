@@ -57,9 +57,13 @@ typedef struct PackagedDataToSend
   uint32_t data_len;
   std::unique_ptr<uint8_t> data;
   Server_t destination;
+  bool logged;
+  std::time_t schedule;
 
   PackagedDataToSend(uint32_t curr_attempt, uint32_t data_len, uint8_t *data_content, Server_t& destination)
   {
+    this->logged = false;
+    this->schedule = 0;
     this->curr_attempt = curr_attempt;
     this->data_len = data_len;
     this->data = std::unique_ptr<uint8_t>(data_content);
@@ -68,6 +72,8 @@ typedef struct PackagedDataToSend
 
   PackagedDataToSend(PackagedDataToSend &&origin)
   {
+    logged = origin.logged;
+    schedule = origin.schedule;
     curr_attempt = origin.curr_attempt;
     data_len = origin.data_len;
     data = std::move(origin.data);

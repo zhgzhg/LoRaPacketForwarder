@@ -104,7 +104,10 @@ typedef struct LoRaDataPkt {
   const uint8_t *msg;
   uint32_t msg_sz;
   float SNR;
-  float RSSI; 
+  float RSSI;
+  float freq_mhz;
+  float bandwidth_khz;
+  SpreadingFactor_t sf;
 } LoRaDataPkt_t;
 
 #endif

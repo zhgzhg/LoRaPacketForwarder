@@ -19,6 +19,7 @@
 #include "smtUdpPacketForwarder/ConfigFileParser.h"
 #include "smtUdpPacketForwarder/UdpUtils.h"
 #include "smtUdpPacketForwarder/Radio.h"
+#include "smtUdpPacketForwarder/TimeUtils.h"
 
 extern char **environ;
 
@@ -36,8 +37,8 @@ void appIntubator(char* const argv[]) { // {{{
     } else if (std::time(nullptr) - lastObtained > 180) { // 3 minutes
       time_t currTime{std::time(nullptr)};
       char asciiTime[25];
-      std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
-      printf("(%s) Main thread block detected! Restarting the application...\n", asciiTime);
+      printf("(%s) Main thread block detected! Restarting the application...\n",
+          ts_asciitime(currTime, asciiTime, sizeof(asciiTime)));
       fflush(stdout);
 
       char exePath[PATH_MAX];
@@ -128,7 +129,7 @@ void networkPacketExhangeWorker(LoRaPacketTrafficStats_t *loraPacketStats,
           {
             time_t currTime{std::time(nullptr)};
             char asciiTime[25];
-            std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
+            ts_asciitime(currTime, asciiTime, sizeof(asciiTime));
             printf("(%s) No %s ACK received from %s\n", asciiTime, (direction == UP_TX ? "uplink" : "downlink fetch request"),
               packet.destination.address.c_str());
             if (RequeuePacket(std::move(packet), 4, direction))
@@ -150,7 +151,7 @@ int main(int argc, char **argv) {
   time_t currTime{std::time(nullptr)};
   char asciiTime[25];
 
-  std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
+  ts_asciitime(currTime, asciiTime, sizeof(asciiTime));
   printf("(%s) Started %s...\n", asciiTime, argv[0]);
 
   char networkIfaceName[64] = "eth0";
@@ -189,7 +190,7 @@ int main(int argc, char **argv) {
 
   if (state != ERR_NONE) {
     currTime = std::time(nullptr);
-    std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
+    ts_asciitime(currTime, asciiTime, sizeof(asciiTime));
     printf("Giving up due to failing LoRa chip setup!\n(%.24s) Exiting!\n", asciiTime);
     SPI.endTransaction();
     return 1;
@@ -208,7 +209,6 @@ int main(int argc, char **argv) {
   signal(SIGXFSZ, signalHandler); // Creation of a file so large that
                                   // it's not allowed anymore to grow
 
-  bool receiveOnAllChannels = cfg.lora_chip_settings.all_spreading_factors;
 
   const uint16_t delayIntervalMs = 20;
   const uint32_t sendStatPktIntervalSeconds = 20;
@@ -222,8 +222,10 @@ int main(int argc, char **argv) {
   uint8_t msg[SX127X_MAX_PACKET_LENGTH];
 
   std::thread packetExchanger{networkPacketExhangeWorker, &loraPacketStats, &cfg.servers};
-  std::thread intubator{appIntubator, argv};
-  intubator.detach();
+  #ifndef NOINTUBATION
+    std::thread intubator{appIntubator, argv};
+    intubator.detach();
+  #endif
 
   while (keepRunning) {
     ++hearthbeat;
@@ -231,27 +233,20 @@ int main(int argc, char **argv) {
 
     if (keepRunning && currTime >= nextStatUpdateTime) {
       nextStatUpdateTime = currTime + sendStatPktIntervalSeconds;
-      //std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
-      //printf("(%s) Sending stat update to server(s)... ", asciiTime);
+
       PublishStatProtocolPacket(cfg, loraPacketStats);
       ++loraPacketStats.forw_packets_crc_good;
       ++loraPacketStats.forw_packets;
-      //printf("done\n");
-      fflush(stdout);
 
-      //std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
-      //printf("(%s) Sending downlink packet keepalive request to server(s)... ", asciiTime);
       PublishLoRaDownlinkProtocolPacket(cfg);
       ++loraPacketStats.forw_packets_crc_good;
       ++loraPacketStats.forw_packets;
-      //printf("done\n");
-      fflush(stdout);
     }
 
     if (!keepRunning) break;
 
     LoRaRecvStat lastRecvResult = recvLoRaUplinkData(
-		                    lora, receiveOnAllChannels, loraDataPacket, msg, loraPacketStats);
+		                    lora, cfg, loraDataPacket, msg, loraPacketStats);
 
     if (lastRecvResult == LoRaRecvStat::DATARECV) {
       PublishLoRaUplinkProtocolPacket(cfg, loraDataPacket);
@@ -262,28 +257,35 @@ int main(int argc, char **argv) {
 
         do {
           state = restartLoRaChip(lora, cfg);
-          std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
+          ts_asciitime(currTime, asciiTime, sizeof(asciiTime));
           printf("(%s) Regular LoRa chip reset done - code %d, %s success\n",
                asciiTime, state, (state == ERR_NONE ? "with" : "WITHOUT"));
           fflush(stdout);
           delay(delayIntervalMs);
         } while (state != ERR_NONE);
 
-      } else if (!receiveOnAllChannels) {
-        delay(delayIntervalMs);
       }
 
       PackagedDataToSend_t downlinkPacket{DequeuePacket(DOWN_RX)};
       if (downlinkPacket.data_len > 0)
       {
-        sendLoRaDownlinkData(lora, downlinkPacket, loraPacketStats);
+        if (sendLoRaDownlinkData(lora, cfg, downlinkPacket, loraPacketStats) == LoRaRecvStat::NODATA)
+        {
+          ts_asciitime(currTime, asciiTime, sizeof(asciiTime));
+          printf("(%s) Downlink packet has been trasmitted with success!\n", asciiTime);
+          fflush(stdout);
+        }
+      }
+
+      if (!cfg.lora_chip_settings.all_spreading_factors) {
+        delay(delayIntervalMs);
       }
     }
 
   }
 
   currTime = std::time(nullptr);
-  std::strftime(asciiTime, sizeof(asciiTime), "%c", std::localtime(&currTime));
+  ts_asciitime(currTime, asciiTime, sizeof(asciiTime));
 
   printf("\n(%s) Shutting down...\n", asciiTime);
   fflush(stdout);
