@@ -16,7 +16,7 @@ all: $(SRC)
 	$(CC) -o LoRaPktFwrd $^ $(CFLAGS) -O3 $(LIBS)
 
 debug: $(SRC)
-	$(CC)  -o LoRaPktFwrd $^ -g3 -DRADIOLIB_DEBUG $(CFLAGS) $(LIBS)
+	$(CC)  -o LoRaPktFwrd $^ -g3 -DRADIOLIB_DEBUG -DNOINTUBATION $(CFLAGS) $(LIBS)
 
 clean:
 	rm -f ./LoRaPktFwrd
