@@ -298,10 +298,12 @@ void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pk
   writer.String("time");
   writer.String(stat_timestamp);
   writer.String("lati");
+  writer.SetMaxDecimalPlaces(5);
   writer.Double(cfg.latitude);
   writer.String("long");
   writer.Double(cfg.longtitude);
   writer.String("alti");
+  writer.SetMaxDecimalPlaces(rapidjson::Writer<rapidjson::StringBuffer>::kDefaultMaxDecimalPlaces);
   writer.Int(cfg.altitude_meters);
   writer.String("rxnb");
   writer.Uint(pktStats.recv_packets);
@@ -310,7 +312,9 @@ void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pk
   writer.String("rxfw");
   writer.Uint(pktStats.forw_packets);
   writer.String("ackr");
+  writer.SetMaxDecimalPlaces(1);
   writer.Double((pktStats.acked_forw_packets / (pktStats.forw_packets > 0 ? pktStats.forw_packets : 1)) * 100.0);
+  writer.SetMaxDecimalPlaces(rapidjson::Writer<rapidjson::StringBuffer>::kDefaultMaxDecimalPlaces);
   writer.String("dwnb");
   writer.Uint(pktStats.downlink_recv_packets);
   writer.String("txnb");
@@ -406,7 +410,9 @@ void PublishLoRaUplinkProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPac
   writer.String("tmst");
   writer.Uint(tmst);
   writer.String("freq");
-  writer.Double(cfg.lora_chip_settings.carrier_frequency_mhz);
+  writer.SetMaxDecimalPlaces(6);
+  writer.Double(loraPacket.freq_mhz);
+  writer.SetMaxDecimalPlaces(rapidjson::Writer<rapidjson::StringBuffer>::kDefaultMaxDecimalPlaces);
   writer.String("chan");
   writer.Uint(0);
   writer.String("rfch");
@@ -418,7 +424,7 @@ void PublishLoRaUplinkProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPac
 
   writer.String("datr");
   char datr[] = "SFxxBWxxxxxx";
-  snprintf(datr, strlen(datr) + 1, "SF%hhuBW%g", cfg.lora_chip_settings.spreading_factor, cfg.lora_chip_settings.bandwidth_khz);
+  snprintf(datr, strlen(datr) + 1, "SF%hhuBW%g", loraPacket.sf, loraPacket.bandwidth_khz);
   writer.String(datr);
 
   writer.String("codr");
