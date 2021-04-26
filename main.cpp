@@ -22,6 +22,8 @@
 #include "smtUdpPacketForwarder/TimeUtils.h"
 
 extern char **environ;
+extern char *optarg;
+extern int optind, opterr, optopt;
 
 static volatile sig_atomic_t keepRunning = 1;
 static volatile unsigned long hearthbeat = 0;
@@ -146,6 +148,34 @@ void networkPacketExhangeWorker(LoRaPacketTrafficStats_t *loraPacketStats,
 
 } // }}}
 
+PlatformInfo_t loadConfig(int argc, char **argv, char **confFile, bool *useIntubator,
+                            char *networkIfaceName, size_t networkIfaceNameSz) { // {{{
+
+  int opt;
+  while ((opt = getopt(argc, argv, "c:d")) != -1) {
+    switch (opt) {
+      case 'c':
+        *confFile = optarg;
+        break;
+      case 'd':
+        *useIntubator = false;
+        break;
+      default: // i.e. ?
+        fprintf(stderr, "Usage:\n%s [-c config.json] [-d] [network_interface_name]\n"
+            "  -c specifies the JSON configuration file (by default config.json) used by the forwarder\n"
+            "  -d disables the automatic restart of the program in a stuck has been detected\n"
+            "  network_interface_name (by default eth0) is used to compute the EUI\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+  }
+
+  if (optind < argc) {
+    strncpy(networkIfaceName, argv[optind], networkIfaceNameSz);
+  }
+
+  return LoadConfiguration(*confFile);
+} // }}}
+
 int main(int argc, char **argv) {
 
   time_t currTime{std::time(nullptr)};
@@ -158,10 +188,11 @@ int main(int argc, char **argv) {
   char gatewayId[25];
   memset(gatewayId, 0, sizeof(gatewayId));
 
-  if (argc > 1)
-  { strcpy(networkIfaceName, (const char*) argv[1]); }
+  char *configFilePath = "config.json";
+  bool useIntubator = true;
 
-  PlatformInfo_t cfg = LoadConfiguration("./config.json");
+  PlatformInfo_t cfg = loadConfig(argc, argv, &configFilePath, &useIntubator,
+                            networkIfaceName, sizeof(networkIfaceName) - 1);
 
   for (auto &serv : cfg.servers) {
     serv.uplink_network_cfg =
@@ -222,10 +253,11 @@ int main(int argc, char **argv) {
   uint8_t msg[SX127X_MAX_PACKET_LENGTH];
 
   std::thread packetExchanger{networkPacketExhangeWorker, &loraPacketStats, &cfg.servers};
-  #ifndef NOINTUBATION
+  if (useIntubator)
+  {
     std::thread intubator{appIntubator, argv};
     intubator.detach();
-  #endif
+  }
 
   while (keepRunning) {
     ++hearthbeat;
