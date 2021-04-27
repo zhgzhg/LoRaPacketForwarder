@@ -162,8 +162,8 @@ PlatformInfo_t loadConfig(int argc, char **argv, char **confFile, bool *useIntub
         break;
       default: // i.e. ?
         fprintf(stderr, "Usage:\n%s [-c config.json] [-d] [network_interface_name]\n"
-            "  -c specifies the JSON configuration file (by default config.json) used by the forwarder\n"
-            "  -d disables the automatic restart of the program in a stuck has been detected\n"
+            "  -c specifies the JSON configuration file (by default config.json)\n"
+            "  -d disables the automatic restart of the program if a stuck has been detected\n"
             "  network_interface_name (by default eth0) is used to compute the EUI\n", argv[0]);
         exit(EXIT_FAILURE);
     }

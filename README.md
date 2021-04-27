@@ -4,15 +4,14 @@ LoRa Packet Forwarder for Linux
 [![Build Status](https://travis-ci.com/zhgzhg/LoRaPacketForwarder.svg?branch=master)](https://travis-ci.com/zhgzhg/LoRaPacketForwarder)
 
 Single channel LoRa UDP packet forwarder ideal for development or
-testing purposes. Can only receive LoRa data and upload it to one or more
-servers. 
+testing purposes. Receives and transmits bidirectionally.
 This project is ideal for DIY of one of the cheapest LoRa "gateways"
 consisting of a single-board computer and a $4 LoRa module.
 
 The goal of the project is to provide simple LoRa forwarder for:
 
 * Linux - OrangePi, RaspberryPi, etc.
-* Very basic support for Semtech UDP protocol v2 - uplink and stats
+* Supports the Semtech UDP protocol v2 - uplink, downlink, and stats
     * The Things Network - tested V2 and V3
 * SPI communication based on wiringPi and modified LoRaLib/RadioLib for Linux (Orange Pi or Raspberry PI) with LoRa chips:
     * SX126x series
@@ -132,11 +131,14 @@ to use its **latest** version.
 * To execute the application:
     * `./LoRaPktFwrd`
 
-* To execute the application and also specify network interface used for ID generation
+* To execute the application and also specify network interface used for ID generation:
     * ./LoRaPktFwrd <interface_name>
         * The default one is eth0
         * Example: `./LoRaPktFwrd wlan0`
-        
+
+* To get the supported CLI options:
+    * `./LoRaPktFwrd -h`
+
 
 ## Dependencies
 
