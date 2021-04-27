@@ -80,8 +80,8 @@ PlatformInfo_t LoadConfiguration(std::string configurationFile)
   }
   result.lora_chip_settings.spreading_factor = static_cast<SpreadingFactor_t>(sf);
 
-  result.lora_chip_settings.carrier_frequency_mhz = (float) doc["carrier_frequency_mhz"].GetDouble();
-  result.lora_chip_settings.bandwidth_khz = (float) doc["bandwidth_khz"].GetDouble();
+  result.lora_chip_settings.carrier_frequency_mhz = doc["carrier_frequency_mhz"].GetDouble();
+  result.lora_chip_settings.bandwidth_khz = doc["bandwidth_khz"].GetDouble();
 
   int cr = doc["coding_rate"].GetInt();
   if (cr < CodingRate_t::CR_MIN || cr > CodingRate_t::CR_MAX) {

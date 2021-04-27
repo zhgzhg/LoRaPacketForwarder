@@ -52,8 +52,8 @@ typedef struct LoRaChipSettings {
 
   bool all_spreading_factors;
   SpreadingFactor_t spreading_factor;
-  float carrier_frequency_mhz;
-  float bandwidth_khz;
+  double carrier_frequency_mhz;
+  double bandwidth_khz;
   CodingRate_t coding_rate;
   uint8_t sync_word;
   uint16_t preamble_length;
@@ -106,8 +106,8 @@ typedef struct LoRaDataPkt {
   uint32_t msg_sz;
   float SNR;
   float RSSI;
-  float freq_mhz;
-  float bandwidth_khz;
+  double freq_mhz;
+  double bandwidth_khz;
   SpreadingFactor_t sf;
 } LoRaDataPkt_t;
 
