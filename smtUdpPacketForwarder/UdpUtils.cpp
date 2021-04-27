@@ -318,7 +318,7 @@ void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pk
   writer.String("dwnb");
   writer.Uint(pktStats.downlink_recv_packets);
   writer.String("txnb");
-  writer.Uint(pktStats.forw_packets_crc_good); // not optimal
+  writer.Uint(pktStats.downlink_tx_packets);
 
   // ==== not part ot the specification ====
   writer.String("pfrm");

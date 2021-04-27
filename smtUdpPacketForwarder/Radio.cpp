@@ -520,6 +520,9 @@ LoRaRecvStat sendLoRaDownlinkData(PhysicalLayer *lora, PlatformInfo_t &cfg, Pack
 
   if (result == ERR_NONE)
   { result = lora->transmit(converted.payload, converted.payload_size); }
+
+  if (result == ERR_NONE)
+  { ++loraPacketStats.downlink_tx_packets; }
   else
   { logMessage("Transmission error: %d\n", result); }
 
