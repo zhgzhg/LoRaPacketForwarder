@@ -92,6 +92,15 @@ void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
         gain \
       ); \
     } else { \
+      result = chip->beginFSK( \
+        downlink_pkt.carrier_frequency_mhz, \
+        downlink_pkt.fsk_datarate_bps / 1000.0, \
+        downlink_pkt.fsk_freq_deviation_hz / 1000.0, \
+        downlink_pkt.bandwidth_khz, \
+        (int8_t) downlink_pkt.output_power_dbm, \
+        downlink_pkt.preamble_length, \
+        false /* don't use OOK */ \
+      ); \
     } \
     if (result == ERR_NONE) result = chip->setCurrentLimit(current_lim_ma); \
     if (result == ERR_NONE) { \
