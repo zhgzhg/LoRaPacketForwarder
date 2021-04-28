@@ -283,6 +283,7 @@ int main(int argc, char **argv) {
     if (lastRecvResult == LoRaRecvStat::DATARECV) {
       PublishLoRaUplinkProtocolPacket(cfg, loraDataPacket);
     } else if (keepRunning && lastRecvResult == LoRaRecvStat::NODATA) {
+      currTime = std::time(nullptr);
 
       if (cfg.lora_chip_settings.pin_rest > -1 && currTime >= nextChipRestTime) {
         nextChipRestTime = currTime + loraChipRestIntervalSeconds;
@@ -303,6 +304,7 @@ int main(int argc, char **argv) {
       {
         if (sendLoRaDownlinkData(lora, cfg, downlinkPacket, loraPacketStats) == LoRaRecvStat::NODATA)
         {
+          currTime = std::time(nullptr);
           ts_asciitime(currTime, asciiTime, sizeof(asciiTime));
           printf("(%s) Downlink packet has been trasmitted with success!\n", asciiTime);
           fflush(stdout);
