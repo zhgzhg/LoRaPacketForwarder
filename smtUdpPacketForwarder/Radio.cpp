@@ -357,7 +357,7 @@ static DownlinkPacket downlinkTxJsonToPacket(PackagedDataToSend_t &pkt) {
         result.unix_epoch_timestamp = static_cast<std::time_t>(gps2unix(txpkt["tmms"].GetDouble(), false));
       }
 
-      if (result.unix_epoch_timestamp > add_seconds(now, 24 * 3600) || result.unix_epoch_timestamp < add_seconds(now, -30)) {
+      if (result.unix_epoch_timestamp > add_seconds(now, 24 * 3600) || result.unix_epoch_timestamp < add_seconds(now, -20)) {
         logMessage("Invalid time scheduled: %lu; local ts %lu, internal ts(micros) %lu!\n",
             result.unix_epoch_timestamp, now, internalTsMicros);
         return NO_DP_DATA;
@@ -393,7 +393,7 @@ static DownlinkPacket downlinkTxJsonToPacket(PackagedDataToSend_t &pkt) {
         logMessage("Invalid SF or BW!\n");
         return NO_DP_DATA;
       }
-      result.spreading_factor = static_cast<SpreadingFactor_t>(sf);
+      result.spreading_factor = SpreadingFactor_t(sf);
       result.bandwidth_khz = bw;
 
       int cr = 0;
@@ -462,12 +462,12 @@ LoRaRecvStat sendLoRaDownlinkData(PhysicalLayer *lora, PlatformInfo_t &cfg, Pack
   if (!converted.initialised)
   { return LoRaRecvStat::DATARECVFAIL; }
 
+  time_t now{std::time(nullptr)};
+  time_t when = (converted.send_immediately ? now : (newPacket ? converted.unix_epoch_timestamp : pkt.schedule));
+
   if (!converted.send_immediately)
   {
-    time_t now{std::time(nullptr)};
-    time_t when = (newPacket ? converted.unix_epoch_timestamp : pkt.schedule);
-
-    if (now < add_seconds(when, -20))
+    if (now < add_seconds(when, -5))
     {
       if (newPacket)
       {
@@ -519,7 +519,14 @@ LoRaRecvStat sendLoRaDownlinkData(PhysicalLayer *lora, PlatformInfo_t &cfg, Pack
   MODULE_REINIT_FOR_TX(RFM97, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain);
 
   if (result == ERR_NONE)
-  { result = lora->transmit(converted.payload, converted.payload_size); }
+  {
+    while (now < when)
+    {
+      delay(10);
+      now = std::time(nullptr);
+    }
+    result = lora->transmit(converted.payload, converted.payload_size);
+  }
 
   if (result == ERR_NONE)
   { ++loraPacketStats.downlink_tx_packets; }

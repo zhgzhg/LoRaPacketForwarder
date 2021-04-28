@@ -148,7 +148,7 @@ void networkPacketExhangeWorker(LoRaPacketTrafficStats_t *loraPacketStats,
 
 } // }}}
 
-PlatformInfo_t loadConfig(int argc, char **argv, char **confFile, bool *useIntubator,
+PlatformInfo_t loadConfig(int argc, char **argv, const char **confFile, bool *useIntubator,
                             char *networkIfaceName, size_t networkIfaceNameSz) { // {{{
 
   int opt;
@@ -188,7 +188,7 @@ int main(int argc, char **argv) {
   char gatewayId[25];
   memset(gatewayId, 0, sizeof(gatewayId));
 
-  char *configFilePath = "config.json";
+  const char *configFilePath = "config.json";
   bool useIntubator = true;
 
   PlatformInfo_t cfg = loadConfig(argc, argv, &configFilePath, &useIntubator,

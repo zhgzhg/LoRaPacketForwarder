@@ -16,7 +16,7 @@ void PrintConfiguration(PlatformInfo_t &cfg)
     cfg.lora_chip_settings.pin_dio0, cfg.lora_chip_settings.pin_dio1, cfg.lora_chip_settings.pin_rest);
 
 
-  printf("LoRa %s Chip:\n  Freq=%f MHz\n  BW=%f KHz\n  SF=%d\n  CR=4/%d\n  SyncWord=0x%x\n  PreambleLength=%d\n\n",
+  printf("LoRa %s Chip:\n  Freq=%f MHz\n  BW=%.3f KHz\n  SF=%d\n  CR=4/%d\n  SyncWord=0x%x\n  PreambleLength=%d\n\n",
     cfg.lora_chip_settings.ic_model.c_str(),
     cfg.lora_chip_settings.carrier_frequency_mhz,cfg.lora_chip_settings.bandwidth_khz,
     cfg.lora_chip_settings.spreading_factor, cfg.lora_chip_settings.coding_rate,
