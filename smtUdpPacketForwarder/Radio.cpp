@@ -51,11 +51,11 @@ void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
 	  module->reset(); \
 	  delay(10); \
 	} \
-}
+	}
 
 #define MODULE_REINIT(chip_class, origin, is_reinitted, result, pi_cfg, power, current_lim_ma, gain) \
 	if (!is_reinitted && origin != nullptr && typeid(*origin) == typeid(chip_class)) { \
-    is_reinitted = true; \
+	  is_reinitted = true; \
 	  chip_class* chip = static_cast<chip_class*>(origin); \
 	  result = chip->begin( \
 	    pi_cfg.lora_chip_settings.carrier_frequency_mhz, \
@@ -68,48 +68,58 @@ void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
 	    gain \
 	  ); \
 	  if (result == ERR_NONE) result = chip->setCurrentLimit(current_lim_ma); \
-    if (result == ERR_NONE) { \
-      SX127x* sx127x_chip = dynamic_cast<SX127x*>(origin); \
-      if (sx127x_chip != nullptr) { \
-        result = sx127x_chip->invertIQ(false); \
-      } \
-    } \
+	  if (result == ERR_NONE) { \
+	    SX127x* sx127x_chip = dynamic_cast<SX127x*>(origin); \
+	    if (sx127x_chip != nullptr) { \
+	      result = sx127x_chip->invertIQ(false); \
+	    } else { \
+	      SX126x* sx126x_chip = dynamic_cast<SX126x*>(origin); \
+	      if (sx126x_chip != nullptr) { \
+	       result = sx126x_chip->invertIQ(false); \
+	      } \
+	    } \
+	  } \
 	}
 
 #define MODULE_REINIT_FOR_TX(chip_class, origin, is_reinitted, result, pi_cfg, downlink_pkt, current_lim_ma, gain) \
-  if (!is_reinitted && origin != nullptr && typeid(*origin) == typeid(chip_class)) { \
-    is_reinitted = true; \
+	if (!is_reinitted && origin != nullptr && typeid(*origin) == typeid(chip_class)) { \
+	  is_reinitted = true; \
 	  chip_class* chip = static_cast<chip_class*>(origin); \
-    if (downlink_pkt.fsk_datarate_bps == 0) { \
-      result = chip->begin( \
-        downlink_pkt.carrier_frequency_mhz, \
-        downlink_pkt.bandwidth_khz, \
-        downlink_pkt.spreading_factor, \
-        downlink_pkt.coding_rate, \
-        pi_cfg.lora_chip_settings.sync_word, \
-        (int8_t) downlink_pkt.output_power_dbm, \
-        downlink_pkt.preamble_length, \
-        gain \
-      ); \
-    } else { \
-      result = chip->beginFSK( \
-        downlink_pkt.carrier_frequency_mhz, \
-        downlink_pkt.fsk_datarate_bps / 1000.0, \
-        downlink_pkt.fsk_freq_deviation_hz / 1000.0, \
-        downlink_pkt.bandwidth_khz, \
-        (int8_t) downlink_pkt.output_power_dbm, \
-        downlink_pkt.preamble_length, \
-        false /* don't use OOK */ \
-      ); \
-    } \
-    if (result == ERR_NONE) result = chip->setCurrentLimit(current_lim_ma); \
-    if (result == ERR_NONE) { \
-      SX127x* sx127x_chip = dynamic_cast<SX127x*>(origin); \
-      if (sx127x_chip != nullptr) { \
-        result = sx127x_chip->invertIQ(downlink_pkt.iq_polatization_inversion); \
-      } \
-    } \
-  }
+	  if (downlink_pkt.fsk_datarate_bps == 0) { \
+	    result = chip->begin( \
+	      downlink_pkt.carrier_frequency_mhz, \
+	      downlink_pkt.bandwidth_khz, \
+	      downlink_pkt.spreading_factor, \
+	      downlink_pkt.coding_rate, \
+	      pi_cfg.lora_chip_settings.sync_word, \
+	      (int8_t) downlink_pkt.output_power_dbm, \
+	      downlink_pkt.preamble_length, \
+	      gain \
+	    ); \
+	    if (result == ERR_NONE) { \
+	      SX127x* sx127x_chip = dynamic_cast<SX127x*>(origin); \
+	      if (sx127x_chip != nullptr) { \
+	        result = sx127x_chip->invertIQ(downlink_pkt.iq_polatization_inversion); \
+	      } else { \
+	        SX126x* sx126x_chip = dynamic_cast<SX126x*>(origin); \
+	        if (sx126x_chip != nullptr) { \
+	          result = sx126x_chip->invertIQ(downlink_pkt.iq_polatization_inversion); \
+	        } \
+	      } \
+	    } \
+	  } else { \
+	    result = chip->beginFSK( \
+	      downlink_pkt.carrier_frequency_mhz, \
+	      downlink_pkt.fsk_datarate_bps / 1000.0, \
+	      downlink_pkt.fsk_freq_deviation_hz / 1000.0, \
+	      downlink_pkt.bandwidth_khz, \
+	      (int8_t) downlink_pkt.output_power_dbm, \
+	      downlink_pkt.preamble_length, \
+	      false /* don't use OOK */ \
+	    ); \
+	  } \
+	  if (result == ERR_NONE) result = chip->setCurrentLimit(current_lim_ma); \
+	}
 
 void doRestartLoRaChip(PhysicalLayer *lora, PlatformInfo_t &cfg) { // {{{
   if (cfg.lora_chip_settings.pin_rest > -1) {
@@ -128,17 +138,17 @@ uint16_t restartLoRaChip(PhysicalLayer *lora, PlatformInfo_t &cfg) { // {{{
   bool is_reinitted = false;
   uint16_t result = ERR_NONE + 1;
 
-  MODULE_REINIT(SX1261, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
-  MODULE_REINIT(SX1262, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
-  MODULE_REINIT(SX1268, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
-  MODULE_REINIT(SX1272, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
-  MODULE_REINIT(SX1273, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
-  MODULE_REINIT(SX1276, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
-  MODULE_REINIT(SX1277, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
-  MODULE_REINIT(SX1278, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
-  MODULE_REINIT(SX1279, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
-  MODULE_REINIT(RFM95, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
-  MODULE_REINIT(RFM96, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain); 
+  MODULE_REINIT(SX1261, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain);
+  MODULE_REINIT(SX1262, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain);
+  MODULE_REINIT(SX1268, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain);
+  MODULE_REINIT(SX1272, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain);
+  MODULE_REINIT(SX1273, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain);
+  MODULE_REINIT(SX1276, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain);
+  MODULE_REINIT(SX1277, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain);
+  MODULE_REINIT(SX1278, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain);
+  MODULE_REINIT(SX1279, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain);
+  MODULE_REINIT(RFM95, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain);
+  MODULE_REINIT(RFM96, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain);
   MODULE_REINIT(RFM97, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain);
 
   return result;
@@ -168,21 +178,21 @@ PhysicalLayer* instantiateLoRaChip(LoRaChipSettings_t& lora_chip_settings, SPICl
 } // }}}
 
 #define PKT_ENRICHER(origin_class, instance_ptr, inst_type_info, lora_packet, freq_err) \
-if (inst_type_info == typeid(origin_class)) { \
-	origin_class *inst = static_cast<origin_class*>(instance_ptr); \
-	lora_packet.RSSI = inst->getRSSI(true); \
-	lora_packet.SNR = inst->getSNR(); \
-	freq_err = inst->getFrequencyError(); \
-	return; \
-}
+	if (inst_type_info == typeid(origin_class)) { \
+	  origin_class *inst = static_cast<origin_class*>(instance_ptr); \
+	  lora_packet.RSSI = inst->getRSSI(true); \
+	  lora_packet.SNR = inst->getSNR(); \
+	  freq_err = inst->getFrequencyError(); \
+	  return; \
+	}
 #define PKT_ENRICHER_NO_FREQ_ERR(origin_class, instance_ptr, inst_type_info, lora_packet, freq_err) \
-if (inst_type_info == typeid(origin_class)) { \
-        origin_class *inst = static_cast<origin_class*>(instance_ptr); \
-        lora_packet.RSSI = inst->getRSSI(); \
-        lora_packet.SNR = inst->getSNR(); \
-        freq_err = 0.0f; \
-        return; \
-}
+	if (inst_type_info == typeid(origin_class)) { \
+	  origin_class *inst = static_cast<origin_class*>(instance_ptr); \
+	  lora_packet.RSSI = inst->getRSSI(); \
+	  lora_packet.SNR = inst->getSNR(); \
+	  freq_err = 0.0f; \
+	  return; \
+	}
 
 void enrichWithRadioStats(PhysicalLayer *lora, LoRaDataPkt_t &pkt, float &freqErr) { // {{{
   const std::type_info &loraInstTypeInfo = typeid(*lora);
@@ -207,21 +217,21 @@ void enrichWithRadioStats(PhysicalLayer *lora, LoRaDataPkt_t &pkt, float &freqEr
 } // }}}
 
 #define ITER_ALL_SF(origin_class, lora, lora_type, is_matched, state, insist_data_recv_fail, sf_min, sf_max, curr_sf) \
-if (!is_matched && lora_type == typeid(origin_class)) { \
-	is_matched = true; \
-	origin_class* inst = static_cast<origin_class*>(lora); \
-	for (unsigned i = sf_min; i <= sf_max; ++i) {\
-		inst->setSpreadingFactor(i); \
-    curr_sf = decltype(curr_sf)(i); \
-		state = inst->scanChannel(); \
-		if (state == PREAMBLE_DETECTED) /*&& lora->getRSSI() > -124.0) */{ \
-			state = inst->receive(msg, SX127X_MAX_PACKET_LENGTH); \
-			insist_data_recv_fail = (state != ERR_NONE); \
-			printf("Got preamble at SF%d, RSSI %f!\n", i, inst->getRSSI()); \
-			break; \
-		} \
-	} \
-}
+	if (!is_matched && lora_type == typeid(origin_class)) { \
+	  is_matched = true; \
+	  origin_class* inst = static_cast<origin_class*>(lora); \
+	  for (unsigned i = sf_min; i <= sf_max; ++i) {\
+	    inst->setSpreadingFactor(i); \
+	    curr_sf = decltype(curr_sf)(i); \
+	    state = inst->scanChannel(); \
+	    if (state == PREAMBLE_DETECTED) /*&& lora->getRSSI() > -124.0) */{ \
+	      state = inst->receive(msg, SX127X_MAX_PACKET_LENGTH); \
+	      insist_data_recv_fail = (state != ERR_NONE); \
+	      printf("Got preamble at SF%d, RSSI %f!\n", i, inst->getRSSI()); \
+	      break; \
+	    } \
+	  } \
+	}
 
 static void logMessage(const char *format, ...) {
   time_t timestamp{std::time(nullptr)};
@@ -505,17 +515,17 @@ LoRaRecvStat sendLoRaDownlinkData(PhysicalLayer *lora, PlatformInfo_t &cfg, Pack
   bool is_reinitted = false;
   uint16_t result = ERR_NONE + 1;
 
-  MODULE_REINIT_FOR_TX(SX1261, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain); 
-  MODULE_REINIT_FOR_TX(SX1262, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain); 
-  MODULE_REINIT_FOR_TX(SX1268, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain); 
-  MODULE_REINIT_FOR_TX(SX1272, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain); 
-  MODULE_REINIT_FOR_TX(SX1273, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain); 
-  MODULE_REINIT_FOR_TX(SX1276, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain); 
-  MODULE_REINIT_FOR_TX(SX1277, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain); 
-  MODULE_REINIT_FOR_TX(SX1278, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain); 
-  MODULE_REINIT_FOR_TX(SX1279, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain); 
-  MODULE_REINIT_FOR_TX(RFM95, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain); 
-  MODULE_REINIT_FOR_TX(RFM96, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain); 
+  MODULE_REINIT_FOR_TX(SX1261, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain);
+  MODULE_REINIT_FOR_TX(SX1262, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain);
+  MODULE_REINIT_FOR_TX(SX1268, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain);
+  MODULE_REINIT_FOR_TX(SX1272, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain);
+  MODULE_REINIT_FOR_TX(SX1273, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain);
+  MODULE_REINIT_FOR_TX(SX1276, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain);
+  MODULE_REINIT_FOR_TX(SX1277, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain);
+  MODULE_REINIT_FOR_TX(SX1278, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain);
+  MODULE_REINIT_FOR_TX(SX1279, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain);
+  MODULE_REINIT_FOR_TX(RFM95, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain);
+  MODULE_REINIT_FOR_TX(RFM96, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain);
   MODULE_REINIT_FOR_TX(RFM97, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain);
 
   if (result == ERR_NONE)
