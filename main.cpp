@@ -79,12 +79,15 @@ void networkPacketExhangeWorker(LoRaPacketTrafficStats_t *loraPacketStats,
         if (origMsg != nullptr && origMsgSz > 15 && origMsg[0] == PROTOCOL_VERSION &&
             origMsg[3] == PKT_PULL_RESP)
         {
-          maxRespErrorJsonMsgSz = 0;
+          //strncpy(respErrorJsonMsg, "NONE", *maxRespErrorJsonMsgSz); // no need
+          //*maxRespErrorJsonMsgSz = 4;
+          *maxRespErrorJsonMsgSz = 0;
           return true;
         }
         else
         {
-          strncpy(respErrorJsonMsg, "Invalid packet or payload", *maxRespErrorJsonMsgSz);
+          // Invalid packet or payload. Send vague, but compliant response
+          strncpy(respErrorJsonMsg, "COLLISION_BEACON", *maxRespErrorJsonMsgSz);
           *maxRespErrorJsonMsgSz = strlen(respErrorJsonMsg);
         }
 
