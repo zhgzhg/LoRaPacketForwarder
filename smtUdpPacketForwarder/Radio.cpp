@@ -13,6 +13,8 @@
 #include "gpsTimestampUtils/GpsTimestampUtils.h"
 #include "base64/base64.h"
 
+static uint8_t gfskSyncWord[] = { 0xC1, 0x94, 0xC1 };
+
 void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
   if (length < 1) {
     fprintf(dest, "\n");
@@ -129,6 +131,7 @@ void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
 	      downlink_pkt.preamble_length, \
 	      false /* don't use OOK */ \
 	    ); \
+      if (result == ERR_NONE) result = chip->setSyncWord(gfskSyncWord, ((uint8_t) sizeof(gfskSyncWord))); \
 	  } \
 	  if (result == ERR_NONE) result = chip->setCurrentLimit(current_lim_ma); \
 	}
@@ -446,6 +449,8 @@ static DownlinkPacket downlinkTxJsonToPacket(PackagedDataToSend_t &pkt) {
           logMessage("Invalid preamble length!\n");
           return NO_DP_DATA;
         }
+    } else if (result.fsk_datarate_bps != 0) {
+      result.preamble_length = 5;
     }
 
     if (txpkt.HasMember("size")) {
