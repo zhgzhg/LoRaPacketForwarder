@@ -45,12 +45,12 @@ void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
 } // }}}
 
 #define MODULE_RESET(chip_class, origin, is_reset) if (!is_reset) { \
-	chip_class* module = dynamic_cast<chip_class*>(origin); \
-	if (module != nullptr) { \
-	  is_reset = true; \
-	  module->reset(); \
-	  delay(10); \
-	} \
+	  chip_class* module = dynamic_cast<chip_class*>(origin); \
+	  if (module != nullptr) { \
+	    is_reset = true; \
+	    module->reset(); \
+	    delay(10); \
+	  } \
 	}
 
 #define MODULE_REINIT(chip_class, origin, is_reinitted, result, pi_cfg, power, current_lim_ma, gain) \
@@ -72,10 +72,16 @@ void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
 	    SX127x* sx127x_chip = dynamic_cast<SX127x*>(origin); \
 	    if (sx127x_chip != nullptr) { \
 	      result = sx127x_chip->invertIQ(false); \
+	      if (result == ERR_NONE) { \
+	        result = sx127x_chip->setCRC(true); \
+	      } \
 	    } else { \
 	      SX126x* sx126x_chip = dynamic_cast<SX126x*>(origin); \
 	      if (sx126x_chip != nullptr) { \
-	       result = sx126x_chip->invertIQ(false); \
+	        result = sx126x_chip->invertIQ(false); \
+	        if (result == ERR_NONE) { \
+	          result = sx126x_chip->setCRC((uint8_t) 1); \
+	        } \
 	      } \
 	    } \
 	  } \
@@ -100,10 +106,16 @@ void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
 	      SX127x* sx127x_chip = dynamic_cast<SX127x*>(origin); \
 	      if (sx127x_chip != nullptr) { \
 	        result = sx127x_chip->invertIQ(downlink_pkt.iq_polatization_inversion); \
+	        if (result == ERR_NONE) { \
+	          result = sx127x_chip->setCRC(!downlink_pkt.disable_crc); \
+	        } \
 	      } else { \
 	        SX126x* sx126x_chip = dynamic_cast<SX126x*>(origin); \
 	        if (sx126x_chip != nullptr) { \
 	          result = sx126x_chip->invertIQ(downlink_pkt.iq_polatization_inversion); \
+	          if (result == ERR_NONE) { \
+	            result = sx126x_chip->setCRC(!downlink_pkt.disable_crc ? (uint8_t) 0 : (uint8_t) 1); \
+	          } \
 	        } \
 	      } \
 	    } \
