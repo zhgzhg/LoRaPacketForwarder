@@ -7,8 +7,26 @@
 #endif
 
 #include <ctime>
+#include <cstdint>
+#include <type_traits>
 
 struct tm* ts_localtime_r(const time_t& timer, struct tm *buf);
+
 const char* ts_asciitime(const time_t& timer, char *buf, size_t buf_sz);
+
 time_t add_seconds(const time_t to, int seconds);
 
+uint64_t curr_timestamp_us();
+
+template<typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type* = nullptr>
+T diff_timestamps(T now, T future, bool &result_isfutureok)
+{
+  T diff{};
+
+  if (future >= now)
+  { diff = future - now; result_isfutureok = true; }
+  else
+  { diff = now - future; result_isfutureok = false; }
+
+  return diff;
+}
