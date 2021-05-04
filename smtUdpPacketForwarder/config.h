@@ -108,6 +108,7 @@ typedef struct LoRaDataPkt {
   float RSSI;
   double freq_mhz;
   double bandwidth_khz;
+  uint32_t internal_recv_ts_us;
   SpreadingFactor_t sf;
 } LoRaDataPkt_t;
 

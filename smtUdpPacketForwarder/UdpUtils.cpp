@@ -279,10 +279,8 @@ void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pk
   status_report[3] = PKT_PUSH_DATA;
 
   /* start composing datagram with the header */
-  uint8_t token_h = (uint8_t)rand(); /* random token */
-  uint8_t token_l = (uint8_t)rand(); /* random token */
-  status_report[1] = token_h;
-  status_report[2] = token_l;
+  status_report[1] = ((uint8_t) rand()); /* random token */
+  status_report[2] = ((uint8_t) rand()); /* random token */
   stat_index = 12; /* 12-byte header */
 
   /* get timestamp for statistics */
@@ -362,32 +360,19 @@ void PublishLoRaUplinkProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPac
   char buff_up[TX_BUFF_UP_SIZE]; /* buffer to compose the upstream packet */
   int buff_index = 0;
 
-  /* gateway <-> MAC protocol variables */
-  //static uint32_t net_mac_h; /* Most Significant Nibble, network order */
-  //static uint32_t net_mac_l; /* Least Significant Nibble, network order */
-
   /* pre-fill the data buffer with fixed fields */
   buff_up[0] = PROTOCOL_VERSION;
   buff_up[3] = PKT_PUSH_DATA;
 
-  /* process some of the configuration variables */
-  //net_mac_h = htonl((uint32_t)(0xFFFFFFFF & (lgwm>>32)));
-  //net_mac_l = htonl((uint32_t)(0xFFFFFFFF &  lgwm  ));
-  //*(uint32_t *)(buff_up + 4) = net_mac_h; 
-  //*(uint32_t *)(buff_up + 8) = net_mac_l;
-
   /* start composing datagram with the header */
-  uint8_t token_h = (uint8_t)rand(); /* random token */
-  uint8_t token_l = (uint8_t)rand(); /* random token */
-  buff_up[1] = token_h;
-  buff_up[2] = token_l;
+  buff_up[1] = ((uint8_t) rand()); /* random token */
+  buff_up[2] = ((uint8_t) rand()); /* random token */
   buff_index = 12; /* 12-byte header */
 
-  // TODO: tmst can jump is time is (re)set, not good.
   struct timeval now;
   gettimeofday(&now, NULL);
   //uint32_t tmst = (uint32_t)(now.tv_sec * 1000000 + now.tv_usec);
-  uint32_t tmst = micros(); // counter since wiringPiSetup was called
+  uint32_t tmst = loraPacket.internal_recv_ts_us; // counter since wiringPiSetup was called
 
   // unix epoch in seconds ts to GPS timestamp in millis
   uint64_t tmms = std::round( (unix2gps(now.tv_sec, false) * 1000.0) + (now.tv_usec / 1000) );
@@ -480,12 +465,6 @@ void PublishLoRaDownlinkProtocolPacket(PlatformInfo_t &cfg) // {{{
 
   buff_up[0] = PROTOCOL_VERSION;
   buff_up[3] = PKT_PULL_DATA;
-
-  /* process some of the configuration variables */
-  //net_mac_h = htonl((uint32_t)(0xFFFFFFFF & (lgwm>>32)));
-  //net_mac_l = htonl((uint32_t)(0xFFFFFFFF &  lgwm  ));
-  //*(uint32_t *)(buff_up + 4) = net_mac_h; 
-  //*(uint32_t *)(buff_up + 8) = net_mac_l;
 
   /* start composing datagram with the header */
   uint8_t token_h = (uint8_t)rand(); /* random token */

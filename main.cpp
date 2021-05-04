@@ -288,7 +288,20 @@ int main(int argc, char **argv) {
     } else if (keepRunning && lastRecvResult == LoRaRecvStat::NODATA) {
       currTime = std::time(nullptr);
 
+      PackagedDataToSend_t downlinkPacket{DequeuePacket(DOWN_RX)};
+      if (downlinkPacket.data_len > 0)
+      {
+        if (sendLoRaDownlinkData(lora, cfg, downlinkPacket, loraPacketStats) == LoRaRecvStat::NODATA)
+        {
+          currTime = std::time(nullptr);
+          ts_asciitime(currTime, asciiTime, sizeof(asciiTime));
+          printf("(%s) Downlink packet has been trasmitted with success!\n", asciiTime);
+          fflush(stdout);
+        }
+      }
+
       if (cfg.lora_chip_settings.pin_rest > -1 && currTime >= nextChipRestTime) {
+        currTime = std::time(nullptr);
         nextChipRestTime = currTime + loraChipRestIntervalSeconds;
 
         do {
@@ -300,18 +313,6 @@ int main(int argc, char **argv) {
           delay(delayIntervalMs);
         } while (state != ERR_NONE);
 
-      }
-
-      PackagedDataToSend_t downlinkPacket{DequeuePacket(DOWN_RX)};
-      if (downlinkPacket.data_len > 0)
-      {
-        if (sendLoRaDownlinkData(lora, cfg, downlinkPacket, loraPacketStats) == LoRaRecvStat::NODATA)
-        {
-          currTime = std::time(nullptr);
-          ts_asciitime(currTime, asciiTime, sizeof(asciiTime));
-          printf("(%s) Downlink packet has been trasmitted with success!\n", asciiTime);
-          fflush(stdout);
-        }
       }
 
       if (!cfg.lora_chip_settings.all_spreading_factors) {

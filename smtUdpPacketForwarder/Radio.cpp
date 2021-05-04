@@ -7,6 +7,8 @@
 #include <string>
 #include <typeinfo>
 #include <cstdarg>
+#include <limits>
+#include <cmath>
 
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
@@ -131,7 +133,7 @@ void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
 	      downlink_pkt.preamble_length, \
 	      false /* don't use OOK */ \
 	    ); \
-      if (result == ERR_NONE) result = chip->setSyncWord(gfskSyncWord, ((uint8_t) sizeof(gfskSyncWord))); \
+	    if (result == ERR_NONE) result = chip->setSyncWord(gfskSyncWord, ((uint8_t) sizeof(gfskSyncWord))); \
 	  } \
 	  if (result == ERR_NONE) result = chip->setCurrentLimit(current_lim_ma); \
 	}
@@ -231,7 +233,7 @@ void enrichWithRadioStats(PhysicalLayer *lora, LoRaDataPkt_t &pkt, float &freqEr
   freqErr = 0.0f;
 } // }}}
 
-#define ITER_ALL_SF(origin_class, lora, lora_type, is_matched, state, insist_data_recv_fail, sf_min, sf_max, curr_sf) \
+#define ITER_ALL_SF(origin_class, lora, lora_type, is_matched, state, insist_data_recv_fail, sf_min, sf_max, recv_ts_micros, curr_sf) \
 	if (!is_matched && lora_type == typeid(origin_class)) { \
 	  is_matched = true; \
 	  origin_class* inst = static_cast<origin_class*>(lora); \
@@ -241,6 +243,7 @@ void enrichWithRadioStats(PhysicalLayer *lora, LoRaDataPkt_t &pkt, float &freqEr
 	    state = inst->scanChannel(); \
 	    if (state == PREAMBLE_DETECTED) /*&& lora->getRSSI() > -124.0) */{ \
 	      state = inst->receive(msg, SX127X_MAX_PACKET_LENGTH); \
+	      recvTsMicros = micros(); \
 	      insist_data_recv_fail = (state != ERR_NONE); \
 	      printf("Got preamble at SF%d, RSSI %f!\n", i, inst->getRSSI()); \
 	      break; \
@@ -268,24 +271,27 @@ LoRaRecvStat recvLoRaUplinkData(PhysicalLayer *lora, PlatformInfo_t &cfg, LoRaDa
   bool insistDataReceiveFailure = false;
 
   SpreadingFactor_t usedSF;
+  uint32_t recvTsMicros;
 
   if (!cfg.lora_chip_settings.all_spreading_factors) {
     state = lora->receive(msg, SX127X_MAX_PACKET_LENGTH);
+    recvTsMicros = micros();
     usedSF = cfg.lora_chip_settings.spreading_factor;
   } else {
     const std::type_info &loraTypeInfo = typeid(*lora);
     bool is_matched = false;
-    ITER_ALL_SF(SX1261, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, usedSF);
-    ITER_ALL_SF(SX1262, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, usedSF);
-    ITER_ALL_SF(SX1268, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, usedSF);
-    ITER_ALL_SF(SX1273, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, usedSF);
-    ITER_ALL_SF(SX1276, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, usedSF);
-    ITER_ALL_SF(SX1277, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, usedSF);
-    ITER_ALL_SF(SX1278, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, usedSF);
-    ITER_ALL_SF(SX1279, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, usedSF);
-    ITER_ALL_SF(RFM95, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, usedSF);
-    ITER_ALL_SF(RFM96, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, usedSF);
-    ITER_ALL_SF(RFM97, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, usedSF);
+    ITER_ALL_SF(SX1261, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, recvTsMicros, usedSF);
+    ITER_ALL_SF(SX1262, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, recvTsMicros, usedSF);
+    ITER_ALL_SF(SX1268, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, recvTsMicros, usedSF);
+    ITER_ALL_SF(SX1272, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, recvTsMicros, usedSF);
+    ITER_ALL_SF(SX1273, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, recvTsMicros, usedSF);
+    ITER_ALL_SF(SX1276, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, recvTsMicros, usedSF);
+    ITER_ALL_SF(SX1277, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, recvTsMicros, usedSF);
+    ITER_ALL_SF(SX1278, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, recvTsMicros, usedSF);
+    ITER_ALL_SF(SX1279, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, recvTsMicros, usedSF);
+    ITER_ALL_SF(RFM95, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, recvTsMicros, usedSF);
+    ITER_ALL_SF(RFM96, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, recvTsMicros, usedSF);
+    ITER_ALL_SF(RFM97, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, recvTsMicros, usedSF);
   }
 
   if (state == ERR_NONE) { // packet was successfully received
@@ -311,6 +317,7 @@ LoRaRecvStat recvLoRaUplinkData(PhysicalLayer *lora, PlatformInfo_t &cfg, LoRaDa
     pkt.msg_sz = msg_length;
     pkt.freq_mhz = cfg.lora_chip_settings.carrier_frequency_mhz;
     pkt.bandwidth_khz = cfg.lora_chip_settings.bandwidth_khz;
+    pkt.internal_recv_ts_us = recvTsMicros;
     pkt.sf = usedSF;
 
     return LoRaRecvStat::DATARECV;
@@ -332,6 +339,7 @@ static struct DownlinkPacket
 
   bool send_immediately;
   std::time_t unix_epoch_timestamp;
+  uint32_t internal_ts_micros;
 
   unsigned long concentrator_rf_chain;
 
@@ -345,7 +353,7 @@ static struct DownlinkPacket
   unsigned long fsk_datarate_bps = 0;
   unsigned long fsk_freq_deviation_hz = 0;
 
-  bool iq_polatization_inversion = false;
+  bool iq_polatization_inversion = true;
 
   unsigned long payload_size = 0;
   unsigned char payload[255];
@@ -371,20 +379,34 @@ static DownlinkPacket downlinkTxJsonToPacket(PackagedDataToSend_t &pkt) {
     const rapidjson::Value& txpkt = doc["txpk"].GetObject();
     result.send_immediately = (txpkt.HasMember("imme") ? txpkt["imme"].GetBool() : false);
     if (!result.send_immediately && (txpkt.HasMember("tmst") || txpkt.HasMember("tmms"))) {
+
+      bool isFutureSchedOk = false;
+
       std::time_t now{std::time(nullptr)};
-      uint32_t internalTsMicros = micros();
+      uint32_t internalTsMicrosNow = micros();
 
       if (txpkt.HasMember("tmst")) {
-        uint32_t scheduledTsMicros = txpkt["tmst"].GetUint();
-        int diffSeconds = ((long)scheduledTsMicros - (long)internalTsMicros) / 1000000;
-        result.unix_epoch_timestamp = add_seconds(now, diffSeconds);
+        uint32_t diffMicros = diff_timestamps(internalTsMicrosNow, txpkt["tmst"].GetUint(), isFutureSchedOk);
+
+        if ((!isFutureSchedOk && diffMicros > 1500000UL) || (isFutureSchedOk && diffMicros < UINT32_MAX - 20000000UL))
+        { isFutureSchedOk = true; }
+
+        result.internal_ts_micros = internalTsMicrosNow + diffMicros;
+        result.unix_epoch_timestamp = add_seconds(now, ((int)(diffMicros / 1000000U)) * (isFutureSchedOk ? 1 : -1));
       } else {
-        result.unix_epoch_timestamp = static_cast<std::time_t>(gps2unix(txpkt["tmms"].GetDouble(), false));
+        double gpsTsMillis = txpkt["tmms"].GetDouble();
+        std::time_t scheduledTs = static_cast<std::time_t>(gps2unix(gpsTsMillis / 1000.0, false));
+
+        isFutureSchedOk = (now <= scheduledTs || now <= add_seconds(scheduledTs, 1));
+
+        result.unix_epoch_timestamp = scheduledTs;
+        result.internal_ts_micros = internalTsMicrosNow + static_cast<uint32_t>(difftime(scheduledTs, now) * 1000000.0);
+        result.internal_ts_micros += (remainder(gpsTsMillis, 1000.0) * 1000);
       }
 
-      if (result.unix_epoch_timestamp > add_seconds(now, 24 * 3600) || result.unix_epoch_timestamp < add_seconds(now, -20)) {
-        logMessage("Invalid time scheduled: %lu; local ts %lu, internal ts(micros) %lu!\n",
-            result.unix_epoch_timestamp, now, internalTsMicros);
+      if (!isFutureSchedOk) {
+        logMessage("Invalid time scheduled: %lu (%lu internal ts micros); local ts %lu, internal ts(micros) %lu!\n",
+            result.unix_epoch_timestamp, result.internal_ts_micros, now, internalTsMicrosNow);
         return NO_DP_DATA;
       }
     } else {
@@ -494,7 +516,7 @@ LoRaRecvStat sendLoRaDownlinkData(PhysicalLayer *lora, PlatformInfo_t &cfg, Pack
 
   if (!converted.send_immediately)
   {
-    if (now < add_seconds(when, -5))
+    if (now < add_seconds(when, -3))
     {
       if (newPacket)
       {
@@ -503,10 +525,10 @@ LoRaRecvStat sendLoRaDownlinkData(PhysicalLayer *lora, PlatformInfo_t &cfg, Pack
         ts_asciitime(converted.unix_epoch_timestamp, asciiTime, sizeof(asciiTime));
         logMessage("Scheduling DOWNlink packet for %s\n", asciiTime);
       }
-      RequeuePacket(std::move(pkt), 9000000, DOWN_RX);
+      RequeuePacket(std::move(pkt), 7000000, DOWN_RX);
       return LoRaRecvStat::DATARECVFAIL;
     }
-    else if (now > add_seconds(when, 10))
+    else if (now > add_seconds(when, 3))
     {
       char asciiTime[25];
       ts_asciitime(converted.unix_epoch_timestamp, asciiTime, sizeof(asciiTime));
@@ -547,10 +569,10 @@ LoRaRecvStat sendLoRaDownlinkData(PhysicalLayer *lora, PlatformInfo_t &cfg, Pack
 
   if (result == ERR_NONE)
   {
-    while (now < when)
+    uint32_t nowMicros = micros();
+    if (nowMicros < converted.internal_ts_micros)
     {
-      delay(10);
-      now = std::time(nullptr);
+      delayMicroseconds(converted.internal_ts_micros - nowMicros);
     }
     result = lora->transmit(converted.payload, converted.payload_size);
   }
