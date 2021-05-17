@@ -118,7 +118,7 @@ void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
 	        if (sx126x_chip != nullptr) { \
 	          result = sx126x_chip->invertIQ(downlink_pkt.iq_polatization_inversion); \
 	          if (result == ERR_NONE) { \
-	            result = sx126x_chip->setCRC(!downlink_pkt.disable_crc ? (uint8_t) 0 : (uint8_t) 1); \
+	            result = sx126x_chip->setCRC(downlink_pkt.disable_crc ? (uint8_t) 0 : (uint8_t) 1); \
 	          } \
 	        } \
 	      } \
@@ -490,6 +490,15 @@ static DownlinkPacket downlinkTxJsonToPacket(PackagedDataToSend_t &pkt) {
     if (txpkt.HasMember("ncrc")) {
       result.disable_crc = txpkt["ncrc"].GetBool();
     }
+
+    uint32_t usCorrection = compute_rf_tx_timestamp_correction_us(
+      result.fsk_datarate_bps, result.payload_size, result.spreading_factor, result.bandwidth_khz,
+      result.coding_rate, !result.disable_crc, false);
+
+    result.internal_ts_micros -= usCorrection;
+
+    if (usCorrection >= 1000000)
+    { result.unix_epoch_timestamp -= (usCorrection / 1000000U); }
 
     result.initialised = true;
     return result;

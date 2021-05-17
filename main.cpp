@@ -36,7 +36,7 @@ void appIntubator(char* const argv[]) { // {{{
      if (lastHearthbeat != hearthbeat) {
       lastHearthbeat = hearthbeat;
       lastObtained = std::time(nullptr);
-    } else if (std::time(nullptr) - lastObtained > 180) { // 3 minutes
+    } else if (difftime(std::time(nullptr), lastObtained) > 45.0) {
       time_t currTime{std::time(nullptr)};
       char asciiTime[25];
       printf("(%s) Main thread block detected! Restarting the application...\n",
@@ -146,7 +146,7 @@ void networkPacketExhangeWorker(LoRaPacketTrafficStats_t *loraPacketStats,
        }
     }
 
-    if (!iterateImmediately && keepRunning) std::this_thread::sleep_for(std::chrono::milliseconds(150));
+    if (!iterateImmediately && keepRunning) std::this_thread::sleep_for(std::chrono::milliseconds(50));
   } while (keepRunning);
 
 } // }}}
