@@ -86,6 +86,8 @@ void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
 	        if (result == ERR_NONE) { \
 	          result = sx126x_chip->setCRC((uint8_t) 1); \
 	        } \
+	      } else { \
+	        result = ERR_UNKNOWN; \
 	      } \
 	    } \
 	  } \
@@ -120,6 +122,8 @@ void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
 	          if (result == ERR_NONE) { \
 	            result = sx126x_chip->setCRC(downlink_pkt.disable_crc ? (uint8_t) 0 : (uint8_t) 1); \
 	          } \
+	        } else { \
+	          result = ERR_UNKNOWN; \
 	        } \
 	      } \
 	    } \
@@ -465,7 +469,7 @@ static DownlinkPacket downlinkTxJsonToPacket(PackagedDataToSend_t &pkt) {
 
     if (txpkt.HasMember("prea")) {
         int preamble = txpkt["prea"].GetUint();
-        if (preamble > 0 && preamble < 256) {
+        if (preamble > 5 && preamble < 256) {
           result.preamble_length = static_cast<unsigned char>(preamble);
         } else {
           logMessage("Invalid preamble length!\n");
@@ -497,7 +501,7 @@ static DownlinkPacket downlinkTxJsonToPacket(PackagedDataToSend_t &pkt) {
 
     result.internal_ts_micros -= usCorrection;
 
-    if (usCorrection >= 1000000)
+    if (usCorrection >= 1000000U)
     { result.unix_epoch_timestamp -= (usCorrection / 1000000U); }
 
     result.initialised = true;
