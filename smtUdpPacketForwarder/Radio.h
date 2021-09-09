@@ -25,4 +25,5 @@ LoRaRecvStat recvLoRaUplinkData(PhysicalLayer *lora, PlatformInfo_t &cfg, LoRaDa
 LoRaRecvStat sendLoRaDownlinkData(PhysicalLayer *lora, PlatformInfo_t &cfg, PackagedDataToSend_t &pkt,
                                   LoRaPacketTrafficStats_t &loraPacketStats);
 
+const char* decodeRadioLibErrorCode(short errorCode);
 #endif

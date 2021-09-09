@@ -219,7 +219,7 @@ int main(int argc, char **argv) {
     state = restartLoRaChip(lora, cfg);
 
     if (state == ERR_NONE) printf("LoRa chip setup succeeded! Waiting for data...\n\n");
-    else printf("LoRa chip setup failed, code %d\n", state);
+    else printf("LoRa chip setup failed, code (%d) %s\n", state, decodeRadioLibErrorCode(state));
   }
 
   if (state != ERR_NONE) {
@@ -309,6 +309,8 @@ int main(int argc, char **argv) {
           ts_asciitime(currTime, asciiTime, sizeof(asciiTime));
           printf("(%s) Regular LoRa chip reset done - code %d, %s success\n",
                asciiTime, state, (state == ERR_NONE ? "with" : "WITHOUT"));
+	  if (state != ERR_NONE)
+	  { printf("(%s) Error: %s\n", asciiTime, decodeRadioLibErrorCode(state)); }
           fflush(stdout);
           delay(delayIntervalMs);
         } while (state != ERR_NONE);

@@ -17,6 +17,56 @@
 
 static uint8_t gfskSyncWord[] = { 0xC1, 0x94, 0xC1 };
 
+const char* decodeRadioLibErrorCode(short errorCode) { // {{{
+  static const std::map<short, const char*> ERRORS {
+    { ERR_NONE, "No error" } ,
+    { ERR_UNKNOWN, "Unknown error" },
+    { ERR_CHIP_NOT_FOUND, "Chip not found" },
+    { ERR_MEMORY_ALLOCATION_FAILED, "Memory allocation failed" },
+    { ERR_PACKET_TOO_LONG, "Packet too long" },
+    { ERR_TX_TIMEOUT, "Outgoing transmission timeout" },
+    { ERR_RX_TIMEOUT, "Incoming transmission timeout" },
+    { ERR_CRC_MISMATCH, "CRC mismatch" },
+    { ERR_INVALID_BANDWIDTH, "Invalid bandwidth" },
+    { ERR_INVALID_SPREADING_FACTOR, "Invalid spreading factor" },
+    { ERR_INVALID_CODING_RATE, "Invalid coding rate" },
+    { ERR_INVALID_BIT_RANGE, "Invalid bit range" },
+    { ERR_INVALID_FREQUENCY, "Invalid frequency" },
+    { ERR_INVALID_OUTPUT_POWER, "Invalid output power" },
+    { ERR_SPI_WRITE_FAILED, "SPI write failed" },
+    { ERR_INVALID_CURRENT_LIMIT, "Invalid current limit" },
+    { ERR_INVALID_PREAMBLE_LENGTH, "Invalid preamle length" },
+    { ERR_INVALID_GAIN, "Invalid gain" },
+    { ERR_WRONG_MODEM, "Wrong modem" },
+    { ERR_INVALID_NUM_SAMPLES, "Invalid number of RSSI samples" },
+    { ERR_INVALID_RSSI_OFFSET, "Invalid RSSI offset" },
+    { ERR_INVALID_ENCODING, "Invalid encoding" },
+    { ERR_LORA_HEADER_DAMAGED, "Damaged LoRa packet header" },
+    { ERR_INVALID_BIT_RATE, "Invalid bit rate" },
+    { ERR_INVALID_FREQUENCY_DEVIATION, "Invalid frequency deviation" },
+    { ERR_INVALID_BIT_RATE_BW_RATIO, "Invalid bit rate to bandwidth ratio" },
+    { ERR_INVALID_RX_BANDWIDTH, "Invalid receive bandwidth" },
+    { ERR_INVALID_SYNC_WORD, "Invalid FSK sync word" },
+    { ERR_INVALID_DATA_SHAPING, "Invalid FSK data shaping" },
+    { ERR_INVALID_MODULATION, "Invalid modulation" },
+    { ERR_INVALID_OOK_RSSI_PEAK_TYPE, "Invalid OOK RSSI peak type" },
+    { ERR_INVALID_CRC_CONFIGURATION, "Invalid CRC configuration" },
+    { ERR_INVALID_TCXO_VOLTAGE, "Invalid TCXO reference voltage" },
+    { ERR_INVALID_MODULATION_PARAMETERS, "Invalid rate, bandwidth, or frequency deviation ratio parameters" },
+    { ERR_SPI_CMD_TIMEOUT, "Timed out while waiting for an SPI command to complete" },
+    { ERR_SPI_CMD_INVALID, "Invalid SPI command" },
+    { ERR_SPI_CMD_FAILED, "Failed to execute an SPI command" },
+    { ERR_INVALID_SLEEP_PERIOD, "Too short/long sleep period (incl. the TCXO delay)" },
+    { ERR_INVALID_RX_PERIOD, "Too short/long receive period" }
+  };
+  static const char *NO_ERR_INFO = "- no error code info available -";
+
+  if (ERRORS.find(errorCode) != ERRORS.end())
+  { return ERRORS.at(errorCode); }
+
+  return NO_ERR_INFO;
+} // }}}
+
 void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
   if (length < 1) {
     fprintf(dest, "\n");
