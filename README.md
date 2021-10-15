@@ -88,7 +88,7 @@ For e.g.:
           |         SLCK |===== Pin #23 [OrangePiH3 Physical] / [[a.k.a WiringPi pin ## 14]]
           |          NSS |===== Pin #12 [OrangePiH3 Physical] / [a.k.a WiringPi pin ## 6]
           |         DIO0 |===== Pin #16 [OrangePiH3 Physical] / [a.k.a WiringPi pin ## 9]
-          |         REST |===== optional, connect to VCC if it isn't used
+          |         REST |===== optional, if it isn't used leave floating or connect to VCC
           |          GND |
            --------------
 

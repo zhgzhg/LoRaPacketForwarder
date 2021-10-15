@@ -98,12 +98,16 @@ void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
   fflush(dest);
 } // }}}
 
-#define MODULE_RESET(chip_class, origin, is_reset) if (!is_reset) { \
+#define MODULE_RESET(chip_class, origin, is_reset, reset_pin) if (!is_reset) { \
 	  chip_class* module = dynamic_cast<chip_class*>(origin); \
 	  if (module != nullptr) { \
 	    is_reset = true; \
 	    module->reset(); \
-	    delay(10); \
+	    SX127x* sx127x_chip = dynamic_cast<SX127x*>(origin); \
+	    if (sx127x_chip != nullptr) { \
+	      Module::pinMode(reset_pin, INPUT); \
+	    } \
+	    delay(5); \
 	  } \
 	}
 
@@ -195,10 +199,11 @@ void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
 void doRestartLoRaChip(PhysicalLayer *lora, PlatformInfo_t &cfg) { // {{{
   if (cfg.lora_chip_settings.pin_rest > -1) {
     bool is_reset = false;
-    MODULE_RESET(SX1261, lora, is_reset); MODULE_RESET(SX1262, lora, is_reset);  MODULE_RESET(SX1268, lora, is_reset); 
-    MODULE_RESET(SX1272, lora, is_reset); MODULE_RESET(SX1273, lora, is_reset);  MODULE_RESET(SX1276, lora, is_reset); 
-    MODULE_RESET(SX1277, lora, is_reset); MODULE_RESET(SX1278, lora, is_reset);  MODULE_RESET(SX1279, lora, is_reset); 
-    MODULE_RESET(RFM95, lora, is_reset); MODULE_RESET(RFM96, lora, is_reset); MODULE_RESET(RFM97, lora, is_reset); 
+    RADIOLIB_PIN_TYPE reset_pin = (RADIOLIB_PIN_TYPE) cfg.lora_chip_settings.pin_rest;
+    MODULE_RESET(SX1261, lora, is_reset, reset_pin); MODULE_RESET(SX1262, lora, is_reset, reset_pin); MODULE_RESET(SX1268, lora, is_reset, reset_pin);
+    MODULE_RESET(SX1272, lora, is_reset, reset_pin); MODULE_RESET(SX1273, lora, is_reset, reset_pin); MODULE_RESET(SX1276, lora, is_reset, reset_pin);
+    MODULE_RESET(SX1277, lora, is_reset, reset_pin); MODULE_RESET(SX1278, lora, is_reset, reset_pin); MODULE_RESET(SX1279, lora, is_reset, reset_pin);
+    MODULE_RESET(RFM95, lora, is_reset, reset_pin); MODULE_RESET(RFM96, lora, is_reset, reset_pin); MODULE_RESET(RFM97, lora, is_reset, reset_pin);
   }
 } // }}}
 
