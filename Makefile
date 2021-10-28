@@ -1,7 +1,7 @@
 CC = g++
 LIBS = -lwiringPi -lm -lpthread -lrt -lcrypt
-CFLAGS = -std=c++14 -Wall -DLINUX -DARDUINO=999 -IRadioLib/src/ -IRadioLib/src/modules/ -IRadioLib/src/protocols/ \
-	 -IRadioLib/src/modules/RF69/ -IRadioLib/src/modules/RFM9x/ -IRadioLib/src/modules/SX127x/ \
+CFLAGS = -std=c++14 -Wall -DLINUX -DARDUINO=999 -DRADIOLIB_FIX_ERRATA_SX127X -IRadioLib/src/ -IRadioLib/src/modules/ \
+	 -IRadioLib/src/protocols/ -IRadioLib/src/modules/RF69/ -IRadioLib/src/modules/RFM9x/ -IRadioLib/src/modules/SX127x/ \
          -IRadioLib/src/modules/SX126x/ -IRadioLib/src/linux-workarounds/ -IRadioLib/src/linux-workarounds/SPI/
 
 # Should be equivalent to your list of C files, if you don't build selectively
