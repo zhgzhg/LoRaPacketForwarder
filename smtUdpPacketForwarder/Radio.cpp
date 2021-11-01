@@ -543,7 +543,7 @@ static DownlinkPacket downlinkTxJsonToPacket(PackagedDataToSend_t &pkt) {
     }
 
     if (txpkt.HasMember("data")) {
-      b64_to_bin(txpkt["data"].GetString(), result.payload_size, result.payload, 255);
+      result.payload_size = b64_to_bin(txpkt["data"].GetString(), txpkt["data"].GetStringLength(), result.payload, 255);
     }
 
     if (txpkt.HasMember("ncrc")) {
