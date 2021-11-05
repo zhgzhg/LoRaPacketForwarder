@@ -31,6 +31,14 @@ T diff_timestamps(T now, T future, bool &result_isfutureok)
   return diff;
 }
 
+template<typename T, typename std::enable_if<std::is_arithmetic<T>::value>::type* = nullptr>
+T diff_timestamps(T now, T future)
+{
+  bool dont_care;
+  return diff_timestamps(now, future, dont_care);
+}
+
 uint32_t compute_rf_tx_timestamp_correction_us(
   uint32_t fsk_rx_datarate_bauds, uint32_t packet_size, uint32_t spreading_factor,
-  uint32_t bandwidth_khz, uint32_t coding_rate, bool is_crc_enabled, bool is_ppm_mode);
+  uint32_t bandwidth_khz, uint32_t coding_rate, bool is_crc_enabled, bool is_ppm_mode,
+  uint32_t spi_freq_hz);

@@ -14,6 +14,9 @@
 #include <unistd.h>
 #include <linux/limits.h>
 
+#include <sys/resource.h>
+#include <sched.h>
+
 #include <RadioLib.h>
 
 #include "smtUdpPacketForwarder/ConfigFileParser.h"
@@ -255,13 +258,19 @@ int main(int argc, char **argv) {
   LoRaDataPkt_t loraDataPacket;
   uint8_t msg[SX127X_MAX_PACKET_LENGTH];
 
+  // use realtime priority to impove the app's RF transmission timings
+  setpriority(PRIO_PROCESS, 0, -20);
+  sched_param schedPrio;
+  schedPrio.sched_priority = sched_get_priority_max(SCHED_RR) - 10;
+  sched_setscheduler(0, SCHED_RR, (const sched_param*) &schedPrio);
+
   std::thread packetExchanger{networkPacketExhangeWorker, &loraPacketStats, &cfg.servers};
-  if (useIntubator)
-  {
+  if (useIntubator) {
     std::thread intubator{appIntubator, argv};
     intubator.detach();
   }
 
+  time_t lastRFInteractionTime{0};
   while (keepRunning) {
     ++hearthbeat;
     currTime = std::time(nullptr);
@@ -281,26 +290,27 @@ int main(int argc, char **argv) {
     if (!keepRunning) break;
 
     LoRaRecvStat lastRecvResult = recvLoRaUplinkData(
-		                    lora, cfg, loraDataPacket, msg, loraPacketStats);
+                        lora, cfg, loraDataPacket, msg, loraPacketStats);
 
     if (lastRecvResult == LoRaRecvStat::DATARECV) {
       PublishLoRaUplinkProtocolPacket(cfg, loraDataPacket);
+      lastRFInteractionTime = std::time(nullptr);
     } else if (keepRunning && lastRecvResult == LoRaRecvStat::NODATA) {
       currTime = std::time(nullptr);
 
       PackagedDataToSend_t downlinkPacket{DequeuePacket(DOWN_RX)};
-      if (downlinkPacket.data_len > 0)
-      {
-        if (sendLoRaDownlinkData(lora, cfg, downlinkPacket, loraPacketStats) == LoRaRecvStat::NODATA)
-        {
-          currTime = std::time(nullptr);
+      if (downlinkPacket.data_len > 0) {
+        if (sendLoRaDownlinkData(lora, cfg, downlinkPacket, loraPacketStats) == LoRaRecvStat::NODATA) {
+          lastRFInteractionTime = currTime = std::time(nullptr);
           ts_asciitime(currTime, asciiTime, sizeof(asciiTime));
           printf("(%s) Downlink packet has been trasmitted with success!\n", asciiTime);
-          fflush(stdout);
+          // don't flush - there's a high chance for a subsequent uplink response
         }
       }
 
-      if (cfg.lora_chip_settings.pin_rest > -1 && currTime >= nextChipRestTime) {
+      if (cfg.lora_chip_settings.pin_rest > -1 && currTime >= nextChipRestTime
+             && diff_timestamps(lastRFInteractionTime, currTime) > 5200) {
+
         currTime = std::time(nullptr);
         nextChipRestTime = currTime + loraChipRestIntervalSeconds;
 
@@ -309,16 +319,18 @@ int main(int argc, char **argv) {
           ts_asciitime(currTime, asciiTime, sizeof(asciiTime));
           printf("(%s) Regular LoRa chip reset done - code %d, %s success\n",
                asciiTime, state, (state == ERR_NONE ? "with" : "WITHOUT"));
-	  if (state != ERR_NONE)
-	  { printf("(%s) Error: %s\n", asciiTime, decodeRadioLibErrorCode(state)); }
+
+          if (state != ERR_NONE)
+          { printf("(%s) Error: %s\n", asciiTime, decodeRadioLibErrorCode(state)); }
+
           fflush(stdout);
           delay(delayIntervalMs);
         } while (state != ERR_NONE);
-
       }
 
-      if (!cfg.lora_chip_settings.all_spreading_factors) {
-        delay(delayIntervalMs);
+      if (diff_timestamps(lastRFInteractionTime, currTime) > 5200
+            && !cfg.lora_chip_settings.all_spreading_factors) {
+          delay(delayIntervalMs);
       }
     }
 

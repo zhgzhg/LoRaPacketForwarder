@@ -111,6 +111,13 @@ void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
 	  } \
 	}
 
+#define MODULE_DELAY_TRANSMISSION(chip_class, origin, is_delayed, until_ts_us) \
+  if (!is_delayed && origin != nullptr && typeid(*origin) == typeid(chip_class)) { \
+    is_delayed = true; \
+    chip_class* chip = static_cast<chip_class*>(origin); \
+    chip->holdTransmissionUntil(until_ts_us); \
+  } \
+
 #define MODULE_REINIT(chip_class, origin, is_reinitted, result, pi_cfg, power, current_lim_ma, gain) \
 	if (!is_reinitted && origin != nullptr && typeid(*origin) == typeid(chip_class)) { \
 	  is_reinitted = true; \
@@ -165,7 +172,7 @@ void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
 	    if (result == ERR_NONE) { \
 	      SX127x* sx127x_chip = dynamic_cast<SX127x*>(origin); \
 	      if (sx127x_chip != nullptr) { \
-	        result = sx127x_chip->invertIQ(downlink_pkt.iq_polatization_inversion); \
+	        result = sx127x_chip->invertIQ(!downlink_pkt.iq_polatization_inversion); \
 	        if (result == ERR_NONE) { \
 	          result = sx127x_chip->setCRC(!downlink_pkt.disable_crc); \
 	        } \
@@ -332,7 +339,7 @@ LoRaRecvStat recvLoRaUplinkData(PhysicalLayer *lora, PlatformInfo_t &cfg, LoRaDa
   SpreadingFactor_t usedSF;
   uint32_t recvTsMicros;
 
-  if (!cfg.lora_chip_settings.all_spreading_factors) {
+  if (!cfg.lora_chip_settings.all_spreading_factors){
     state = lora->receive(msg, SX127X_MAX_PACKET_LENGTH);
     recvTsMicros = micros();
     usedSF = cfg.lora_chip_settings.spreading_factor;
@@ -353,7 +360,7 @@ LoRaRecvStat recvLoRaUplinkData(PhysicalLayer *lora, PlatformInfo_t &cfg, LoRaDa
     ITER_ALL_SF(RFM97, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, recvTsMicros, usedSF);
   }
 
-  if (state == ERR_NONE) { // packet was successfully received
+  if (state == ERR_NONE) {
 
     int msg_length = lora->getPacketLength(false);
     float freqErr = 0.0f;
@@ -382,7 +389,6 @@ LoRaRecvStat recvLoRaUplinkData(PhysicalLayer *lora, PlatformInfo_t &cfg, LoRaDa
     return LoRaRecvStat::DATARECV;
 
   } else if (state == ERR_CRC_MISMATCH) {
-    // packet was received, but is malformed
 
     ++loraPacketStats.recv_packets;
     logMessage("Received UPlink packet with CRC error - ignored!\n");
@@ -420,7 +426,7 @@ static struct DownlinkPacket
   bool disable_crc = true;
 } NO_DP_DATA;
 
-static DownlinkPacket downlinkTxJsonToPacket(PackagedDataToSend_t &pkt) {
+static DownlinkPacket downlinkTxJsonToPacket(PackagedDataToSend_t &pkt, const LoRaChipSettings_t &chip_settings) {
     rapidjson::Document doc;
     doc.Parse(reinterpret_cast<const char*>(pkt.data.get()));
     if (doc.HasParseError()) {
@@ -543,7 +549,7 @@ static DownlinkPacket downlinkTxJsonToPacket(PackagedDataToSend_t &pkt) {
     }
 
     if (txpkt.HasMember("data")) {
-      b64_to_bin(txpkt["data"].GetString(), result.payload_size, result.payload, 255);
+      result.payload_size = b64_to_bin(txpkt["data"].GetString(),txpkt["data"].GetStringLength(), result.payload, 255);
     }
 
     if (txpkt.HasMember("ncrc")) {
@@ -552,7 +558,7 @@ static DownlinkPacket downlinkTxJsonToPacket(PackagedDataToSend_t &pkt) {
 
     uint32_t usCorrection = compute_rf_tx_timestamp_correction_us(
       result.fsk_datarate_bps, result.payload_size, result.spreading_factor, result.bandwidth_khz,
-      result.coding_rate, !result.disable_crc, false);
+      result.coding_rate, !result.disable_crc, false, chip_settings.spi_speed_hz);
 
     result.internal_ts_micros -= usCorrection;
 
@@ -575,7 +581,7 @@ LoRaRecvStat sendLoRaDownlinkData(PhysicalLayer *lora, PlatformInfo_t &cfg, Pack
     newPacket = true;
   }
 
-  DownlinkPacket converted = downlinkTxJsonToPacket(pkt);
+  DownlinkPacket converted = downlinkTxJsonToPacket(pkt, cfg.lora_chip_settings);
   if (!converted.initialised)
   { return LoRaRecvStat::DATARECVFAIL; }
 
@@ -584,7 +590,7 @@ LoRaRecvStat sendLoRaDownlinkData(PhysicalLayer *lora, PlatformInfo_t &cfg, Pack
 
   if (!converted.send_immediately)
   {
-    if (now < add_seconds(when, -3))
+    if (now < add_seconds(when, -2))
     {
       if (newPacket)
       {
@@ -596,7 +602,7 @@ LoRaRecvStat sendLoRaDownlinkData(PhysicalLayer *lora, PlatformInfo_t &cfg, Pack
       RequeuePacket(std::move(pkt), 7000000, DOWN_RX);
       return LoRaRecvStat::DATARECVFAIL;
     }
-    else if (now > add_seconds(when, 3))
+    else if (now > add_seconds(when, 1))
     {
       char asciiTime[25];
       ts_asciitime(converted.unix_epoch_timestamp, asciiTime, sizeof(asciiTime));
@@ -637,11 +643,19 @@ LoRaRecvStat sendLoRaDownlinkData(PhysicalLayer *lora, PlatformInfo_t &cfg, Pack
 
   if (result == ERR_NONE)
   {
-    uint32_t nowMicros = micros();
-    if (nowMicros < converted.internal_ts_micros)
-    {
-      delayMicroseconds(converted.internal_ts_micros - nowMicros);
-    }
+    bool is_delayed = false;
+    MODULE_DELAY_TRANSMISSION(SX1261, lora, is_delayed, converted.internal_ts_micros);
+    MODULE_DELAY_TRANSMISSION(SX1262, lora, is_delayed, converted.internal_ts_micros);
+    MODULE_DELAY_TRANSMISSION(SX1268, lora, is_delayed, converted.internal_ts_micros);
+    MODULE_DELAY_TRANSMISSION(SX1272, lora, is_delayed, converted.internal_ts_micros);
+    MODULE_DELAY_TRANSMISSION(SX1273, lora, is_delayed, converted.internal_ts_micros);
+    MODULE_DELAY_TRANSMISSION(SX1276, lora, is_delayed, converted.internal_ts_micros);
+    MODULE_DELAY_TRANSMISSION(SX1277, lora, is_delayed, converted.internal_ts_micros);
+    MODULE_DELAY_TRANSMISSION(SX1278, lora, is_delayed, converted.internal_ts_micros);
+    MODULE_DELAY_TRANSMISSION(SX1279, lora, is_delayed, converted.internal_ts_micros);
+    MODULE_DELAY_TRANSMISSION(RFM95, lora, is_delayed, converted.internal_ts_micros);
+    MODULE_DELAY_TRANSMISSION(RFM96, lora, is_delayed, converted.internal_ts_micros);
+    MODULE_DELAY_TRANSMISSION(RFM97, lora, is_delayed, converted.internal_ts_micros);
     result = lora->transmit(converted.payload, converted.payload_size);
   }
 

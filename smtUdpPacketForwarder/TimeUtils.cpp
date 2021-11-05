@@ -40,9 +40,10 @@ uint64_t curr_timestamp_us()
 
 uint32_t compute_rf_tx_timestamp_correction_us(
   uint32_t fsk_rx_datarate_bauds, uint32_t packet_size, uint32_t spreading_factor,
-  uint32_t bandwidth_khz, uint32_t coding_rate, bool is_crc_enabled, bool is_ppm_mode)
+  uint32_t bandwidth_khz, uint32_t coding_rate, bool is_crc_enabled, bool is_ppm_mode,
+  uint32_t spi_freq_hz)
 {
-    uint32_t offset = 10100; // experimental
+    uint32_t offset = 3536U;
 
     if (fsk_rx_datarate_bauds != 0)
     { return offset + ((uint32_t)680000 / fsk_rx_datarate_bauds) - 20; }
@@ -94,5 +95,8 @@ uint32_t compute_rf_tx_timestamp_correction_us(
         timestamp_correction = 0;
     }
 
-    return offset + timestamp_correction;
+    long double spi_freq_correction_ns = 1000000000.0 / spi_freq_hz;
+    spi_freq_correction_ns *= 2; //(sz + 2);
+
+    return offset + timestamp_correction + (uint32_t)(spi_freq_correction_ns / 1000);
 }
