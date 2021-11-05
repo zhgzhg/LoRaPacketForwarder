@@ -309,7 +309,7 @@ int main(int argc, char **argv) {
       }
 
       if (cfg.lora_chip_settings.pin_rest > -1 && currTime >= nextChipRestTime
-             && diff_timestamps(lastRFInteractionTime, currTime) > 5200) {
+             && diff_timestamps(lastRFInteractionTime, currTime) > 6) {
 
         currTime = std::time(nullptr);
         nextChipRestTime = currTime + loraChipRestIntervalSeconds;
@@ -328,9 +328,9 @@ int main(int argc, char **argv) {
         } while (state != ERR_NONE);
       }
 
-      if (diff_timestamps(lastRFInteractionTime, currTime) > 5200
-            && !cfg.lora_chip_settings.all_spreading_factors) {
-          delay(delayIntervalMs);
+      if (!cfg.lora_chip_settings.all_spreading_factors
+            && diff_timestamps(lastRFInteractionTime, currTime) > 6) {
+        delay(delayIntervalMs);
       }
     }
 
