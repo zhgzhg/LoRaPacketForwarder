@@ -32,49 +32,13 @@
       "enabled": true
     },
     {
-      "address": "router.eu.thethings.network",
+      "address": "nam1.cloud.thethings.network",
       "port": 1700,
       "recv_timeout_ms": 500,
       "enabled": false
     },
     {
-      "address": "router.us.thethings.network",
-      "port": 1700,
-      "recv_timeout_ms": 500,
-      "enabled": false
-    },
-    {
-      "address": "router.cn.thethings.network",
-      "port": 1700,
-      "recv_timeout_ms": 500,
-      "enabled": false
-    },
-    {
-      "address": "router.as.thethings.network",
-      "port": 1700,
-      "recv_timeout_ms": 500,
-      "enabled": false
-    },
-    {
-      "address": "router.as1.thethings.network",
-      "port": 1700,
-      "recv_timeout_ms": 500,
-      "enabled": false
-    },
-    {
-      "address": "router.as2.thethings.network",
-      "port": 1700,
-      "recv_timeout_ms": 500,
-      "enabled": false
-    },
-    {
-      "address": "router.kr.thethings.network",
-      "port": 1700,
-      "recv_timeout_ms": 500,
-      "enabled": false
-    },
-    {
-      "address": "router.jp.thethings.network",
+      "address": "au1.cloud.thethings.network",
       "port": 1700,
       "recv_timeout_ms": 500,
       "enabled": false
