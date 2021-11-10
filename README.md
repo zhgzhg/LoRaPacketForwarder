@@ -16,7 +16,7 @@ The goal of the project is to provide simple LoRa forwarder for:
     * ChirpStack - tested V3
 * Supported LoRaWAN device classes:
     * class A , LoRa modulation - tested
-* SPI communication based on wiringPi and modified LoRaLib/RadioLib for Linux (Orange Pi or Raspberry PI) with LoRa chips:
+* SPI communication based on wiringPi and modified RadioLib for Linux (Orange Pi or Raspberry PI) with LoRa chips:
     * SX126x series
     * SX127x series
     * RFM9x series
