@@ -10,9 +10,12 @@ consisting of a single-board computer and a $4 LoRa module.
 
 The goal of the project is to provide simple LoRa forwarder for:
 
-* Linux - OrangePi, RaspberryPi, etc.
-* Supports the Semtech UDP protocol v2 - uplink, downlink, and stats
+* Linux - Orange Pi, Raspberry Pi, etc.
+* Supports the Semtech UDP protocol v2 - uplink, downlink, and stats:
     * The Things Network - tested V2 and V3
+    * ChirpStack - tested V3
+* Supported LoRaWAN device classes:
+    * class A , LoRa modulation - tested
 * SPI communication based on wiringPi and modified LoRaLib/RadioLib for Linux (Orange Pi or Raspberry PI) with LoRa chips:
     * SX126x series
     * SX127x series
@@ -106,8 +109,11 @@ to use its **latest** version.
 
 * Compile wiringPi for Orange PI **//for the ZERO model use WiringOP-Zero library instead//** with `./build` command
     * Optionally specify the PLATFORM variable to change the board config (for e.g. for Orange Pi PC: `PLATFORM=orangepipc ./build`) or leave the build script to determine it automatically.
-    * On Armbian and Orange PI Zero you might need to add overlay spi-spidev as well as parameter `param_spidev_spi_bus=1` in __/boot/armbianEnv.txt__ (for more info check [https://docs.armbian.com/User-Guide_Allwinner_overlays/](https://docs.armbian.com/User-Guide_Allwinner_overlays/) and [https://github.com/armbian/sunxi-DT-overlays/blob/master/sun8i-h3/README.sun8i-h3-overlays](https://github.com/armbian/sunxi-DT-overlays/blob/master/sun8i-h3/README.sun8i-h3-overlays))
-    * execute `gpio readall` to see the board pinout scheme table
+    *  On Armbian and Orange PI you might need to add the `spi-spidev` overlay. Additionally in __/boot/armbianEnv.txt__ you'll need to add parameter `param_spidev_spi_bus=1` or `param_spidev_spi_bus=0` depending on the board model. For e.g.:
+        * Orange PI Zero - `param_spidev_spi_bus=1`
+        * Orange PI PC - `param_spidev_spi_bus=0`
+        * For more information check [https://docs.armbian.com/User-Guide_Allwinner_overlays/](https://docs.armbian.com/User-Guide_Allwinner_overlays/), [https://github.com/armbian/sunxi-DT-overlays/blob/master/sun8i-h3/README.sun8i-h3-overlays](https://github.com/armbian/sunxi-DT-overlays/blob/master/sun8i-h3/README.sun8i-h3-overlays)) , and consult with the board's specific docs
+    * Execute `gpio readall` to see the board pinout scheme table
 * Compile this project with `make`
 
 
@@ -125,7 +131,7 @@ to use its **latest** version.
         * For SX127x series: `SX1272`, `SX1273`, `SX1276`, `SX1277`, `SX1278`, or `SX1279`
         * For RFM9x series: `RFM95`, `RFM96`, `RFM97`, or `RFM98`
     * Edit the pinout (execute `gpio readall` to check wiringPi pin numbers that need to be specified). Please
-**note** that ***pin_rest*** is *optional*. If it isn't used you should leave it to -1 and also connect it to 3.3V;
+**note** that ***pin_rest*** is *optional*. If it isn't used you should set it to -1 and leave the transceiver's pin floating or connected to VCC;
     * Edit the remaining parameters accordingly.
 
 * To execute the application:
@@ -167,9 +173,16 @@ immediately pick data from the transmitter.
 A tiny temperature monitor program that can run in the background and modify GPIO pins in response.
 
 
-## This project is influenced and contains code from:
+## Limitations
 
-[https://github.com/jgromes/LoRaLib](https://github.com/jgromes/LoRaLib)
+Achieving a perfect downlink transmission timings appears to be difficult with the combination of
+an ordinary single-board computer equipped with a plain LoRa transceiver. The reason for that comes
+down to the imprecise hardware clock of the computer combined with the non-real time nature of Linux.
+To compensate for it this project aims running with a very high (nearly real time) priority,
+and increased CPU usage (roughly 20%) to partially make up for the irregular OS delays.
+
+
+## This project is influenced and contains code from:
 
 [https://github.com/jgromes/RadioLib](https://github.com/jgromes/RadioLib)
 
@@ -184,6 +197,3 @@ A tiny temperature monitor program that can run in the background and modify GPI
 [https://www.gw-openscience.org/static/js/gpstimeutil.js](https://www.gw-openscience.org/static/js/gpstimeutil.js)
 
 [https://github.com/Tencent/rapidjson](https://github.com/Tencent/rapidjson)
-
-### Parameter details on the supported LoRa IC's:
-[https://github.com/jgromes/LoRaLib/wiki/Supported-LoRa-modules](https://github.com/jgromes/LoRaLib/wiki/Supported-LoRa-modules)

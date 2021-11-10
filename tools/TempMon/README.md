@@ -42,6 +42,6 @@ How to Uninstall the System Service
 Sample Applications
 ------------------
 
-* Smart cooling fan (if combined with MOSFET)
+* Smart cooling fan (if combined with a MOSFET)
 * Controlling other circuity depending on temperature
 * Controlling devices based on pseudo-temperature values
