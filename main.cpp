@@ -216,16 +216,16 @@ int main(int argc, char **argv) {
 
   PhysicalLayer* lora = instantiateLoRaChip(cfg.lora_chip_settings, SPI, spiSettings);
 
-  uint16_t state = ERR_NONE + 1;
+  uint16_t state = RADIOLIB_ERR_NONE + 1;
 
-  for (uint8_t c = 0; state != ERR_NONE && c < 200; ++c) {
+  for (uint8_t c = 0; state != RADIOLIB_ERR_NONE && c < 200; ++c) {
     state = restartLoRaChip(lora, cfg);
 
-    if (state == ERR_NONE) printf("LoRa chip setup succeeded! Waiting for data...\n\n");
+    if (state == RADIOLIB_ERR_NONE) printf("LoRa chip setup succeeded! Waiting for data...\n\n");
     else printf("LoRa chip setup failed, code (%d) %s\n", state, decodeRadioLibErrorCode(state));
   }
 
-  if (state != ERR_NONE) {
+  if (state != RADIOLIB_ERR_NONE) {
     currTime = std::time(nullptr);
     ts_asciitime(currTime, asciiTime, sizeof(asciiTime));
     printf("Giving up due to failing LoRa chip setup!\n(%.24s) Exiting!\n", asciiTime);
@@ -256,7 +256,7 @@ int main(int argc, char **argv) {
 
   LoRaPacketTrafficStats_t loraPacketStats={};
   LoRaDataPkt_t loraDataPacket;
-  uint8_t msg[SX127X_MAX_PACKET_LENGTH];
+  uint8_t msg[RADIOLIB_SX127X_MAX_PACKET_LENGTH];
 
   // use realtime priority to impove the app's RF transmission timings
   setpriority(PRIO_PROCESS, 0, -20);
@@ -318,14 +318,14 @@ int main(int argc, char **argv) {
           state = restartLoRaChip(lora, cfg);
           ts_asciitime(currTime, asciiTime, sizeof(asciiTime));
           printf("(%s) Regular LoRa chip reset done - code %d, %s success\n",
-               asciiTime, state, (state == ERR_NONE ? "with" : "WITHOUT"));
+               asciiTime, state, (state == RADIOLIB_ERR_NONE ? "with" : "WITHOUT"));
 
-          if (state != ERR_NONE)
+          if (state != RADIOLIB_ERR_NONE)
           { printf("(%s) Error: %s\n", asciiTime, decodeRadioLibErrorCode(state)); }
 
           fflush(stdout);
           delay(delayIntervalMs);
-        } while (state != ERR_NONE);
+        } while (state != RADIOLIB_ERR_NONE);
       }
 
       if (!cfg.lora_chip_settings.all_spreading_factors
