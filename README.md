@@ -113,6 +113,7 @@ to use its **latest** version.
         * Orange PI Zero - `param_spidev_spi_bus=1`
         * Orange PI PC - `param_spidev_spi_bus=0`
         * For more information check [https://docs.armbian.com/User-Guide_Allwinner_overlays/](https://docs.armbian.com/User-Guide_Allwinner_overlays/), [https://github.com/armbian/sunxi-DT-overlays/blob/master/sun8i-h3/README.sun8i-h3-overlays](https://github.com/armbian/sunxi-DT-overlays/blob/master/sun8i-h3/README.sun8i-h3-overlays)) , and consult with the board's specific docs
+        * _Warning : On some newer Linux Kernels (for e.g. > 5.10.43-sunxi) depending on the board model the SPI may not work at all. Indication of that may be the missing `/dev/spidev*` directory despite the loaded `spidev` driver. A temporary workaround for this case is switching to an older kernel._
     * Execute `gpio readall` to see the board pinout scheme table
 * Compile this project with `make`
 
