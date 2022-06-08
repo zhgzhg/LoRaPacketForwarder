@@ -127,6 +127,9 @@ to use its **latest** version.
 ## Running LoRa UDP Packet Forwarder
 
 * Create config.json by copying config.json.template:
+    * Edit the spi_port and spi_channel values accordingly.
+        * Consult the MISO / MOSI and in particular ".number" postfixes of the `gpio readall` command
+        * Alternatively observe the output of `sudo ls /dev/spi*` where results like for e.g. "/dev/spidev1.0" correspond to /dev/spidev<**spiChannelNumber**>.<**spiPortNumer**>
     * Edit the ic_model field to specify the LoRa chip model. Use one of the following supported values below:
         * For SX126x series: `SX1261`, `SX1262`, or `SX1268`
         * For SX127x series: `SX1272`, `SX1273`, `SX1276`, `SX1277`, `SX1278`, or `SX1279`
