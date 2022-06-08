@@ -211,7 +211,7 @@ int main(int argc, char **argv) {
   PrintConfiguration(cfg);
 
   SPISettings spiSettings{cfg.lora_chip_settings.spi_speed_hz, MSBFIRST,
-    SPI_MODE0, cfg.lora_chip_settings.spi_channel};
+    SPI_MODE0, cfg.lora_chip_settings.spi_channel, cfg.lora_chip_settings.spi_port};
   SPI.beginTransaction(spiSettings);
 
   PhysicalLayer* lora = instantiateLoRaChip(cfg.lora_chip_settings, SPI, spiSettings);

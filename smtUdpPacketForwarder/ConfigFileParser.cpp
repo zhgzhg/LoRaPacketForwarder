@@ -9,8 +9,8 @@ void PrintConfiguration(PlatformInfo_t &cfg)
 
   printf("Target LoRa Chip Model: %s\n\n", cfg.lora_chip_settings.ic_model.c_str());
 
-  printf("SPI Settings:\n  SPI channel=%d\n  SPI clock speed=%d Hz\n\n", cfg.lora_chip_settings.spi_channel,
-    cfg.lora_chip_settings.spi_speed_hz);
+  printf("SPI Settings:\n  SPI port=%d\n  SPI channel=%d\n  SPI clock speed=%d Hz\n\n", cfg.lora_chip_settings.spi_port,
+    cfg.lora_chip_settings.spi_channel, cfg.lora_chip_settings.spi_speed_hz);
 
   printf("(WiringPI) Pins:\n  nss_cs=%d\n  dio0=%d\n  dio1=%d\n  rest=%d\n\n", cfg.lora_chip_settings.pin_nss_cs,
     cfg.lora_chip_settings.pin_dio0, cfg.lora_chip_settings.pin_dio1, cfg.lora_chip_settings.pin_rest);
@@ -55,6 +55,8 @@ PlatformInfo_t LoadConfiguration(std::string configurationFile)
   PlatformInfo_t result;
 
   result.lora_chip_settings.ic_model = std::string(doc["ic_model"].GetString());
+
+  result.lora_chip_settings.spi_port = (uint8_t)(doc.HasMember("spi_port") ? doc["spi_port"].GetUint() : 1);
 
   result.lora_chip_settings.spi_channel = (uint8_t) doc["spi_channel"].GetUint();
   if (result.lora_chip_settings.spi_channel > 1) {
