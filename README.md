@@ -110,10 +110,11 @@ to use its **latest** version.
 * Compile wiringPi for Orange PI **//for the ZERO model use WiringOP-Zero library instead//** with `./build` command
     * Optionally specify the PLATFORM variable to change the board config (for e.g. for Orange Pi PC: `PLATFORM=orangepipc ./build`) or leave the build script to determine it automatically.
     *  On Armbian and Orange PI you might need to add the `spi-spidev` overlay. Additionally in __/boot/armbianEnv.txt__ you'll need to add parameter `param_spidev_spi_bus=1` or `param_spidev_spi_bus=0` depending on the board model. For e.g.:
-        * Orange PI Zero - `param_spidev_spi_bus=1`
+        * Orange PI Zero - `param_spidev_spi_bus=1` if we consider the the following active overlays: `i2c0 i2c1 pps-gpio pwm spi-add-cs1 spi-spidev uart1 usbhost2 usbhost3`
         * Orange PI PC - `param_spidev_spi_bus=0`
         * For more information check [https://docs.armbian.com/User-Guide_Allwinner_overlays/](https://docs.armbian.com/User-Guide_Allwinner_overlays/), [https://github.com/armbian/sunxi-DT-overlays/blob/master/sun8i-h3/README.sun8i-h3-overlays](https://github.com/armbian/sunxi-DT-overlays/blob/master/sun8i-h3/README.sun8i-h3-overlays)) , and consult with the board's specific docs
         * _Warning : On some newer Linux Kernels (for e.g. > 5.10.43-sunxi) depending on the board model the SPI may not work at all. Indication of that may be the missing `/dev/spidev*` directory despite the loaded `spidev` driver. A temporary workaround for this case is switching to an older kernel._
+        * **Warning 2 : Variations in the loaded overlays even for the same board will produce different results for the available GPIO pins, SPI devices, etc! The `gpio readall` command will also show a slightly different table, having some rows hidden or shown.**
     * Execute `gpio readall` to see the board pinout scheme table
 * Compile this project with `make`
 
@@ -129,8 +130,8 @@ to use its **latest** version.
 * Create config.json by copying config.json.template:
     * Edit the spi_port and spi_channel values accordingly.
         * Consult the MISO / MOSI and in particular ".number" postfixes of the `gpio readall` command
-        * Alternatively observe the output of `sudo ls /dev/spi*` where results like for e.g. "/dev/spidev1.0" correspond to /dev/spidev<**spiChannelNumber**>.<**spiPortNumer**>
-        * Note that the support to specify custom **spi_port** is a non-standard feature, which may not work on environments with the original wiringPi for RaspberryPi. An alternative solution to spi_port is creating symlinks to /dev/spidev<**x**>.<**x**>.
+        * Additionally observe the output of `sudo ls /dev/spi*` where results like for e.g. "/dev/spidev1.0" correspond to /dev/spidev<**spiChannelNumber**>.<**spiPortNumer**>
+        * Note that the ability to specify custom **spi_port** is a non-standard feature, which may not work on environments with the original wiringPi for RaspberryPi. An alternative solution is creating symlinks to /dev/spidev<**x**>.<**x**>.
     * Edit the ic_model field to specify the LoRa chip model. Use one of the following supported values below:
         * For SX126x series: `SX1261`, `SX1262`, or `SX1268`
         * For SX127x series: `SX1272`, `SX1273`, `SX1276`, `SX1277`, `SX1278`, or `SX1279`
