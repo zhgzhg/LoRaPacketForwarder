@@ -42,6 +42,7 @@ const char* decodeRadioLibErrorCode(short errorCode) { // {{{
     { RADIOLIB_ERR_INVALID_RSSI_OFFSET, "Invalid RSSI offset" },
     { RADIOLIB_ERR_INVALID_ENCODING, "Invalid encoding" },
     { RADIOLIB_ERR_LORA_HEADER_DAMAGED, "Damaged LoRa packet header" },
+    { RADIOLIB_ERR_INVALID_DIO_PIN, "The specified DIO pin does not exist on this device" },
     { RADIOLIB_ERR_INVALID_BIT_RATE, "Invalid bit rate" },
     { RADIOLIB_ERR_INVALID_FREQUENCY_DEVIATION, "Invalid frequency deviation" },
     { RADIOLIB_ERR_INVALID_BIT_RATE_BW_RATIO, "Invalid bit rate to bandwidth ratio" },
