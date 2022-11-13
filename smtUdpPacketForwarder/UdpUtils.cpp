@@ -31,7 +31,7 @@ void Die(const char *s) // {{{
 bool SolveHostname(const char* p_hostname, uint16_t port, struct sockaddr_in* p_sin) // {{{
 {
   auto iterator = hostname_cache.find(p_hostname);
-  if (iterator != hostname_cache.end() && iterator->second.first < std::time(nullptr))
+  if (iterator != hostname_cache.end() && iterator->second.first > std::time(nullptr))
   {
      p_sin->sin_addr = iterator->second.second;
      return true;
