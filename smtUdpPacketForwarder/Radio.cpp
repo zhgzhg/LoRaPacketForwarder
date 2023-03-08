@@ -59,7 +59,7 @@ const char* decodeRadioLibErrorCode(short errorCode) { // {{{
     { RADIOLIB_ERR_INVALID_MODULATION_PARAMETERS, "Invalid rate, bandwidth, or frequency deviation ratio parameters" },
     { RADIOLIB_ERR_SPI_CMD_TIMEOUT, "Timed out while waiting for an SPI command to complete" },
     { RADIOLIB_ERR_SPI_CMD_INVALID, "Invalid SPI command" },
-    { RADIOLIB_ERR_SPI_CMD_FAILED, "Failed to execute an SPI command" },
+    { RADIOLIB_ERR_SPI_CMD_FAILED, "Failed to execute an SPI command. Make sure the module is not using TCXO while still having its XTAL connected." },
     { RADIOLIB_ERR_INVALID_SLEEP_PERIOD, "Too short/long sleep period (incl. the TCXO delay)" },
     { RADIOLIB_ERR_INVALID_RX_PERIOD, "Too short/long receive period" }
   };
