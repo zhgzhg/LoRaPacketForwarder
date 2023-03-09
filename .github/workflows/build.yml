@@ -11,7 +11,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-        submodules: recursive
+        with:
+          submodules: recursive
 
       - name: Compile
         run: |
