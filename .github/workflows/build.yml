@@ -1,0 +1,29 @@
+name: Build
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Compile
+        run: |
+          cd wiringOP
+          sudo PLATFORM=orangepipc ./build
+          cd ../WiringOP-Zero
+          sudo ./build
+          cd ..
+          make
+          make clean debug
+          cd tools/TempMon
+          make debug
+          make clean all
+          cp config.json.template config.json
+          sudo make install
+
