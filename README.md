@@ -1,7 +1,7 @@
 LoRa Packet Forwarder for Linux
 ===============================
 
-[![Build Status](https://travis-ci.com/zhgzhg/LoRaPacketForwarder.svg?branch=master)](https://travis-ci.com/zhgzhg/LoRaPacketForwarder)
+[![Build Status](https://github.com/zhgzhg/LoRaPacketForwarder/actions/workflows/build.yml/badge.svg)](https://github.com/zhgzhg/LoRaPacketForwarder/actions/workflows/build.yml)
 
 Single channel LoRa UDP packet forwarder ideal for development or
 testing purposes. Receives and transmits bidirectionally.
