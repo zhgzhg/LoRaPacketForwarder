@@ -166,6 +166,13 @@ int main(int argc, char* argv[])
 					 << std::endl;
 				continue;
 			}
+			if (p.duration_seconds.count() < 0)
+			{
+				std::cerr << '[' << std::time(nullptr)
+					<< "] Negative duration_seconds value for wPi pin "
+					<< p.wpi_pin_number << " of " << p.duration_seconds.count()
+					<< std::endl;
+			}
 
 			bool terminate_match = (p.active_on_terminate && keep_running == 0);
 			bool inst_val_match =
@@ -173,8 +180,8 @@ int main(int argc, char* argv[])
 			if (!inst_val_match)
 			{ p.curr_duration_seconds = decltype(p.curr_duration_seconds)::zero(); }
 
-			bool dura_val_match =
-				TEMPR_COMP_OPS.at(p.duration_condition)(p.curr_duration_seconds.count(), p.duration_seconds.count());
+			bool dura_val_match = TEMPR_COMP_OPS.at(p.duration_condition)(
+				p.curr_duration_seconds.count(), p.duration_seconds.count());
 
 			if (!dura_val_match)
 			{ p.duration_condition_already_matched = false; }
