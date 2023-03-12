@@ -42,7 +42,12 @@ struct GpioPin
 	bool active_on_terminate;
 	long double condition_temp_degC;
 	std::string temp_degC_source;
-	long double last_read_temp_degC;
+	long double prev_read_temp_degC;
+
+	std::string duration_condition;
+	std::chrono::seconds duration_seconds;
+	std::chrono::seconds curr_duration_seconds;
+	bool duration_condition_already_matched;
 };
 
 std::vector<GpioPin> parse_config(std::ifstream& fs)
@@ -62,8 +67,13 @@ std::vector<GpioPin> parse_config(std::ifstream& fs)
 		p.condition_temp_degC = o["temperature_degC"].GetDouble();
 		p.active_on_terminate = o.HasMember("match_on_terminate") && o["match_on_terminate"].GetBool();
 		p.temp_degC_source = o["temperature_src"].GetString();
-		p.last_read_temp_degC = 0.0;
-
+		p.prev_read_temp_degC = 0.0;
+		p.duration_condition =
+			(o.HasMember("duration_condition") ? o["duration_condition"].GetString() : ">=");
+		p.duration_seconds = (o.HasMember("duration_seconds") ?
+			std::chrono::seconds{o["duration_seconds"].GetInt64()} : std::chrono::seconds::zero());
+		p.curr_duration_seconds = std::chrono::seconds::zero();
+		p.duration_condition_already_matched = false;
 		result.push_back(p);
 	}
 
@@ -138,7 +148,7 @@ int main(int argc, char* argv[])
 		{
 			long double temp_degC = read_temp_degC(p.temp_degC_source);
 
-			if (p.last_read_temp_degC != temp_degC && std::isnan(temp_degC))
+			if (p.prev_read_temp_degC != temp_degC && std::isnan(temp_degC))
 			{
 				std::cerr << '[' << std::time(nullptr)
 					<< "] Cannot read current temperature for wPi pin "
@@ -147,7 +157,8 @@ int main(int argc, char* argv[])
 				continue;
 			}
 
-			if (TEMPR_COMP_OPS.count(p.condition) < 1)
+			if (TEMPR_COMP_OPS.count(p.condition) < 1
+				|| TEMPR_COMP_OPS.count(p.duration_condition) < 1)
 			{
 				std::cerr << '[' << std::time(nullptr)
 					<< "] Not supported comparison operation for wPi pin "
@@ -157,9 +168,22 @@ int main(int argc, char* argv[])
 			}
 
 			bool terminate_match = (p.active_on_terminate && keep_running == 0);
-			if (terminate_match || (p.last_read_temp_degC != temp_degC
-				&& TEMPR_COMP_OPS.at(p.condition)(temp_degC, p.condition_temp_degC)))
+			bool inst_val_match =
+				TEMPR_COMP_OPS.at(p.condition)(temp_degC, p.condition_temp_degC);
+			if (!inst_val_match)
+			{ p.curr_duration_seconds = decltype(p.curr_duration_seconds)::zero(); }
+
+			bool dura_val_match =
+				TEMPR_COMP_OPS.at(p.duration_condition)(p.curr_duration_seconds.count(), p.duration_seconds.count());
+
+			if (!dura_val_match)
+			{ p.duration_condition_already_matched = false; }
+
+			if (terminate_match || (!p.duration_condition_already_matched
+					&& inst_val_match && dura_val_match))
 			{
+				p.duration_condition_already_matched = true;
+
 				int outp_val = static_cast<int>(p.output_value);
 				pinMode(p.wpi_pin_number, OUTPUT);
 				int curr_outp_val = digitalRead(p.wpi_pin_number);
@@ -167,18 +191,24 @@ int main(int argc, char* argv[])
 				if (curr_outp_val != outp_val) {
 					digitalWrite(p.wpi_pin_number, outp_val);
 					std::cout << '[' << std::time(nullptr) << "] "
-						<< temp_degC << ' ' << p.condition << ' '
-						<< p.condition_temp_degC << " :: wPi pin "
-						<< p.wpi_pin_number << " = " <<  outp_val
+						<< temp_degC << (terminate_match ? " !" : " ")
+						<< p.condition << ' ' << p.condition_temp_degC
+						<< ", for " << p.curr_duration_seconds.count()
+						<< "s" << (terminate_match ? " !" : " ")
+						<< p.duration_condition << ' '
+						<< p.duration_seconds.count()
+						<< "s :: wPi pin " << p.wpi_pin_number
+						<< " = " <<  outp_val
 						<< (terminate_match ? " :: TERMINATION TRIGGERED" : "")
 						<< std::endl;
 				}
 			}
 
-			p.last_read_temp_degC = temp_degC;
+			p.prev_read_temp_degC = temp_degC;
+			++p.curr_duration_seconds;
 		}
 
-		for (unsigned char c = 0; keep_running == 1 && c < 10; ++c) {
+		for (unsigned char c = 0; keep_running == 1 && c < 5; ++c) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(200));
 		}
 

@@ -12,6 +12,9 @@ having their state cleared (low/false/0).
 The temperature is read from a file in millidegrees C resolution as an
 integer value, and later gets converted to a floating point one in degrees.
 
+The duration in seconds for which a certain temperature matches a condition
+can be also taken into account.
+
 For configuration example refer to the configuration template file
 'config.json.template'. Then create a copy of it called 'config.json' with your
 actual settings, which will be used with TempMon.
