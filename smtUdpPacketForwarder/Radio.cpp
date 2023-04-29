@@ -278,7 +278,7 @@ PhysicalLayer* instantiateLoRaChip(LoRaChipSettings_t& lora_chip_settings, SPICl
 	  origin_class *inst = static_cast<origin_class*>(instance_ptr); \
 	  lora_packet.RSSI = inst->getRSSI(); \
 	  lora_packet.SNR = inst->getSNR(); \
-	  freq_err = 0.0f; \
+	  freq_err = 0.0f; /* inst->getFrequencyError(); undocumented, not recommeded */ \
 	  return; \
 	}
 
