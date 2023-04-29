@@ -212,7 +212,7 @@ void doRestartLoRaChip(PhysicalLayer *lora, PlatformInfo_t &cfg) { // {{{
   if (cfg.lora_chip_settings.pin_rest > -1) {
     bool is_reset = false;
     RADIOLIB_PIN_TYPE reset_pin = (RADIOLIB_PIN_TYPE) cfg.lora_chip_settings.pin_rest;
-    MODULE_RESET(SX1261, lora, is_reset, reset_pin); MODULE_RESET(SX1262, lora, is_reset, reset_pin); MODULE_RESET(SX1268, lora, is_reset, reset_pin);
+    MODULE_RESET(SX1261, lora, is_reset, reset_pin); MODULE_RESET(SX1262, lora, is_reset, reset_pin); MODULE_RESET(SX1268, lora, is_reset, reset_pin); MODULE_RESET(LLCC68, lora, is_reset, reset_pin);
     MODULE_RESET(SX1272, lora, is_reset, reset_pin); MODULE_RESET(SX1273, lora, is_reset, reset_pin); MODULE_RESET(SX1276, lora, is_reset, reset_pin);
     MODULE_RESET(SX1277, lora, is_reset, reset_pin); MODULE_RESET(SX1278, lora, is_reset, reset_pin); MODULE_RESET(SX1279, lora, is_reset, reset_pin);
     MODULE_RESET(RFM95, lora, is_reset, reset_pin); MODULE_RESET(RFM96, lora, is_reset, reset_pin); MODULE_RESET(RFM97, lora, is_reset, reset_pin);
@@ -229,6 +229,7 @@ uint16_t restartLoRaChip(PhysicalLayer *lora, PlatformInfo_t &cfg) { // {{{
   MODULE_REINIT(SX1261, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain);
   MODULE_REINIT(SX1262, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain);
   MODULE_REINIT(SX1268, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain);
+  MODULE_REINIT(LLCC68, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain);
   MODULE_REINIT(SX1272, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain);
   MODULE_REINIT(SX1273, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain);
   MODULE_REINIT(SX1276, lora, is_reinitted, result, cfg, power, currentLimit_ma, gain);
@@ -246,7 +247,7 @@ uint16_t restartLoRaChip(PhysicalLayer *lora, PlatformInfo_t &cfg) { // {{{
 
 PhysicalLayer* instantiateLoRaChip(LoRaChipSettings_t& lora_chip_settings, SPIClass &spiClass, SPISettings &spiSettings) { // {{{
   static const std::map<std::string, std::function<PhysicalLayer*(Module*)> > LORA_CHIPS {
-    MODULE_INIT_PAIR(SX1261, SX1261), MODULE_INIT_PAIR(SX1262, SX1262), MODULE_INIT_PAIR(SX1268, SX1268),
+    MODULE_INIT_PAIR(SX1261, SX1261), MODULE_INIT_PAIR(SX1262, SX1262), MODULE_INIT_PAIR(SX1268, SX1268), MODULE_INIT_PAIR(LLCC68, LLCC68),
     MODULE_INIT_PAIR(SX1272, SX1272), MODULE_INIT_PAIR(SX1273, SX1273), MODULE_INIT_PAIR(SX1276, SX1276),
     MODULE_INIT_PAIR(SX1277, SX1277), MODULE_INIT_PAIR(SX1278, SX1278), MODULE_INIT_PAIR(SX1279, SX1279),
     MODULE_INIT_PAIR(RFM95, RFM95), MODULE_INIT_PAIR(RFM96, RFM96), MODULE_INIT_PAIR(RFM97, RFM97),
@@ -288,6 +289,7 @@ void enrichWithRadioStats(PhysicalLayer *lora, LoRaDataPkt_t &pkt, float &freqEr
   PKT_ENRICHER_NO_FREQ_ERR(SX1261, lora, loraInstTypeInfo, pkt, freqErr);
   PKT_ENRICHER_NO_FREQ_ERR(SX1262, lora, loraInstTypeInfo, pkt, freqErr);
   PKT_ENRICHER_NO_FREQ_ERR(SX1268, lora, loraInstTypeInfo, pkt, freqErr);
+  PKT_ENRICHER_NO_FREQ_ERR(LLCC68, lora, loraInstTypeInfo, pkt, freqErr);
   PKT_ENRICHER(SX1272, lora, loraInstTypeInfo, pkt, freqErr);
   PKT_ENRICHER(SX1273, lora, loraInstTypeInfo, pkt, freqErr);
   PKT_ENRICHER(SX1276, lora, loraInstTypeInfo, pkt, freqErr);
@@ -354,6 +356,7 @@ LoRaRecvStat recvLoRaUplinkData(PhysicalLayer *lora, PlatformInfo_t &cfg, LoRaDa
     ITER_ALL_SF(SX1261, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, recvTsMicros, usedSF);
     ITER_ALL_SF(SX1262, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, recvTsMicros, usedSF);
     ITER_ALL_SF(SX1268, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, recvTsMicros, usedSF);
+    ITER_ALL_SF(LLCC68, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, recvTsMicros, usedSF);
     ITER_ALL_SF(SX1272, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, recvTsMicros, usedSF);
     ITER_ALL_SF(SX1273, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, recvTsMicros, usedSF);
     ITER_ALL_SF(SX1276, lora, loraTypeInfo, is_matched, state, insistDataReceiveFailure, SpreadingFactor_t::SF7, SpreadingFactor_t::SF_MAX, recvTsMicros, usedSF);
@@ -636,6 +639,7 @@ LoRaRecvStat sendLoRaDownlinkData(PhysicalLayer *lora, PlatformInfo_t &cfg, Pack
   MODULE_REINIT_FOR_TX(SX1261, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain);
   MODULE_REINIT_FOR_TX(SX1262, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain);
   MODULE_REINIT_FOR_TX(SX1268, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain);
+  MODULE_REINIT_FOR_TX(LLCC68, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain);
   MODULE_REINIT_FOR_TX(SX1272, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain);
   MODULE_REINIT_FOR_TX(SX1273, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain);
   MODULE_REINIT_FOR_TX(SX1276, lora, is_reinitted, result, cfg, converted, currentLimit_ma, gain);
@@ -652,6 +656,7 @@ LoRaRecvStat sendLoRaDownlinkData(PhysicalLayer *lora, PlatformInfo_t &cfg, Pack
     MODULE_DELAY_TRANSMISSION(SX1261, lora, is_delayed, converted.internal_ts_micros);
     MODULE_DELAY_TRANSMISSION(SX1262, lora, is_delayed, converted.internal_ts_micros);
     MODULE_DELAY_TRANSMISSION(SX1268, lora, is_delayed, converted.internal_ts_micros);
+    MODULE_DELAY_TRANSMISSION(LLCC68, lora, is_delayed, converted.internal_ts_micros);
     MODULE_DELAY_TRANSMISSION(SX1272, lora, is_delayed, converted.internal_ts_micros);
     MODULE_DELAY_TRANSMISSION(SX1273, lora, is_delayed, converted.internal_ts_micros);
     MODULE_DELAY_TRANSMISSION(SX1276, lora, is_delayed, converted.internal_ts_micros);

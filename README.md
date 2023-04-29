@@ -18,6 +18,7 @@ The goal of the project is to provide simple LoRa forwarder for:
     * class A , LoRa modulation - tested
 * SPI communication based on wiringPi and modified RadioLib for Linux (Orange Pi or Raspberry PI) with LoRa chips:
     * SX126x series
+    * LLCC68
     * SX127x series
     * RFM9x series
 * Basic JSON configuration file
@@ -134,6 +135,7 @@ to use its **latest** version.
         * Note that the ability to specify custom **spi_port** is a non-standard feature, which may not work on environments with the original wiringPi for RaspberryPi. An alternative solution is creating symlinks to /dev/spidev<**x**>.<**x**>.
     * Edit the ic_model field to specify the LoRa chip model. Use one of the following supported values below:
         * For SX126x series: `SX1261`, `SX1262`, or `SX1268`
+        * For LLCC68: `LLCC68`
         * For SX127x series: `SX1272`, `SX1273`, `SX1276`, `SX1277`, `SX1278`, or `SX1279`
         * For RFM9x series: `RFM95`, `RFM96`, `RFM97`, or `RFM98`
     * Edit the pinout (execute `gpio readall` to check wiringPi pin numbers that need to be specified). Please
