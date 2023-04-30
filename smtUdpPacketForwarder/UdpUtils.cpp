@@ -77,12 +77,26 @@ bool RecvUdp(Server_t &server, char *msg, int size,
   if (!SolveHostname(server.address.c_str(), server.port, &networkConf.si_other))
   { return false; }
 
-  for (int i = 0; i < 2; ++i)
+  socklen_t srcAddrMaxSz = sizeof(networkConf.si_other2);
+  int maxAttempts = 2;
+
+  for (int i = 0; i < maxAttempts; ++i)
   {
-    int j = recv(networkConf.socket, msg, size, 0);
+    networkConf.si_other2_addr_len = srcAddrMaxSz;
+    int j = recvfrom(networkConf.socket, msg, size, 0,
+        (struct sockaddr *) &networkConf.si_other2, &networkConf.si_other2_addr_len);
+
     if (j == -1)
     {
       if (errno == EAGAIN) continue; // timeout
+      else return false;
+    }
+    if (networkConf.si_other2_addr_len > srcAddrMaxSz ||
+        networkConf.si_other.sin_port != networkConf.si_other2.sin_port ||
+        networkConf.si_other.sin_addr.s_addr != networkConf.si_other2.sin_addr.s_addr) {
+
+      // server sender address mismatch
+      if (i < maxAttempts - 1) continue;
       else return false;
     }
 
@@ -144,12 +158,25 @@ bool SendUdp(Server_t &server, char *msg, int length, Direction direction,
 
   char resp[32];
 
-  for (int i = 0; i < 2; ++i) {
-    int j = recv(networkConf.socket, resp, sizeof(resp), 0);
+  socklen_t srcAddrMaxSz = sizeof(networkConf.si_other2);
+  int maxAttempts = 2;
+
+  for (int i = 0; i < maxAttempts; ++i) {
+    networkConf.si_other2_addr_len = srcAddrMaxSz;
+    int j = recvfrom(networkConf.socket, resp, sizeof(resp), 0,
+        (struct sockaddr *) &networkConf.si_other2, &networkConf.si_other2_addr_len);
 
     if (j == -1) {
       if (errno == EAGAIN) continue; // timeout
       else return false; // server connection error
+    }
+    if (networkConf.si_other2_addr_len > srcAddrMaxSz ||
+        networkConf.si_other.sin_port != networkConf.si_other2.sin_port ||
+        networkConf.si_other.sin_addr.s_addr != networkConf.si_other2.sin_addr.s_addr) {
+
+      // server sender address mismatch
+      if (i < maxAttempts - 1) continue;
+      else return false;
     }
   }
 

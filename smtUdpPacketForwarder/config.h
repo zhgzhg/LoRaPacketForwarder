@@ -66,6 +66,8 @@ typedef struct NetworkConf {
   struct ifreq ifr;
   int socket;
   struct timeval recv_timeout;
+  struct sockaddr_in si_other2;
+  socklen_t si_other2_addr_len;
 } NetworkConf_t;
 
 typedef struct Server {
