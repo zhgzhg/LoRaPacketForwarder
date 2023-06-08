@@ -96,7 +96,7 @@ void loop() {
   Serial.print(s);
 
   // you can transmit C-string or Arduino string up to
-  // 256 characters long
+  // 255 characters long
   // NOTE: transmit() is a blocking method!
   //       See example TransmitInterrupt for details
   //       on non-blocking transmission method.
