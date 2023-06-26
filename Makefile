@@ -14,11 +14,33 @@ SRC = $(wildcard RadioLib/src/linux-workarounds/SPI/*.cpp) $(wildcard RadioLib/s
       $(wildcard smtUdpPacketForwarder/base64/*.c) $(wildcard smtUdpPacketForwarder/gpsTimestampUtils/*.cpp) \
       $(wildcard smtUdpPacketForwarder/*.cpp) $(wildcard *.cpp)
 
+TAG_COMMIT := $(shell git rev-list --abbrev-commit --tags --max-count=1 || true)
+TAG := $(shell git describe --abbrev=0 --tags ${TAG_COMMIT} 2>/dev/null || true)
+COMMIT := $(shell git rev-parse --short HEAD || true)
+VERSION := $(TAG:v%=%)
+ifneq ($(COMMIT), $(TAG_COMMIT))
+	ifneq ($(VERSION),)
+		VERSION := $(VERSION)-
+	endif
+	VERSION := $(VERSION)next-$(COMMIT)
+endif
+ifeq ($(VERSION),)
+	ifeq ($(COMMIT),)
+		VERSION := unknown
+	else
+		VERSION := $(COMMIT)
+	endif
+endif
+ifneq ($(shell git status --porcelain || true),)
+	VERSION := $(VERSION)-dirty
+endif
+
+
 all: $(SRC)
-	$(CC) -o LoRaPktFwrd $^ $(CFLAGS) -O3 $(LIBS)
+	$(CC) -o LoRaPktFwrd $^ $(CFLAGS) -DGIT_VER=$(VERSION) -O3 $(LIBS)
 
 debug: $(SRC)
-	$(CC)  -o LoRaPktFwrd $^ -g3 -DRADIOLIB_DEBUG $(CFLAGS) $(LIBS)
+	$(CC)  -o LoRaPktFwrd $^ -g3 -DRADIOLIB_DEBUG -DGIT_VER=$(VERSION) $(CFLAGS) $(LIBS)
 
 clean:
 	rm -f ./LoRaPktFwrd

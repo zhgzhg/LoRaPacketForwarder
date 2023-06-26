@@ -19,6 +19,7 @@
 
 #include <RadioLib.h>
 
+#include "smtUdpPacketForwarder/version.h"
 #include "smtUdpPacketForwarder/ConfigFileParser.h"
 #include "smtUdpPacketForwarder/UdpUtils.h"
 #include "smtUdpPacketForwarder/Radio.h"
@@ -158,7 +159,7 @@ PlatformInfo_t loadConfig(int argc, char **argv, const char **confFile, bool *us
                             char *networkIfaceName, size_t networkIfaceNameSz) { // {{{
 
   int opt;
-  while ((opt = getopt(argc, argv, "c:d")) != -1) {
+  while ((opt = getopt(argc, argv, "c:dvh")) != -1) {
     switch (opt) {
       case 'c':
         *confFile = optarg;
@@ -166,12 +167,19 @@ PlatformInfo_t loadConfig(int argc, char **argv, const char **confFile, bool *us
       case 'd':
         *useIntubator = false;
         break;
+      case 'v':
+        fprintf(stderr, "LoRa Packet Forwarder Version: %s\n", TO_STR(GIT_VER));
+        exit(0);
+      case 'h':
       default: // i.e. ?
-        fprintf(stderr, "Usage:\n%s [-c config.json] [-d] [network_interface_name]\n"
+        fprintf(stderr, "Usage:\n%s [-h] [-v] [-c config.json] [-d] [network_interface_name]\n"
+            "  -h displays this help\n"
+            "  -v displays the version of the tool\n\n"
+
             "  -c specifies the JSON configuration file (by default config.json)\n"
             "  -d disables the automatic restart of the program if a stuck has been detected\n"
             "  network_interface_name (by default eth0) is used to compute the EUI\n", argv[0]);
-        exit(EXIT_FAILURE);
+        exit(opt == 'h' ? 0 : EXIT_FAILURE);
     }
   }
 

@@ -1,9 +1,12 @@
 #include "ConfigFileParser.h"
+#include "version.h"
 
 void PrintConfiguration(PlatformInfo_t &cfg)
 {
   printf("\nPlatformInfo:\n");
   printf("------------\n\n");
+
+  printf("LoRa Packet Forwarder Version: %s\n\n", TO_STR(GIT_VER));
 
   printf("ID (EUI-64): %s\n\n", cfg.__identifier);
 
