@@ -177,14 +177,14 @@ void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
 	    if (result == RADIOLIB_ERR_NONE) { \
 	      SX127x* sx127x_chip = dynamic_cast<SX127x*>(origin); \
 	      if (sx127x_chip != nullptr) { \
-	        result = sx127x_chip->invertIQ(!downlink_pkt.iq_polatization_inversion); \
+	        result = sx127x_chip->invertIQ(downlink_pkt.iq_polatization_inversion); \
 	        if (result == RADIOLIB_ERR_NONE) { \
 	          result = sx127x_chip->setCRC(!downlink_pkt.disable_crc); \
 	        } \
 	      } else { \
 	        SX126x* sx126x_chip = dynamic_cast<SX126x*>(origin); \
 	        if (sx126x_chip != nullptr) { \
-	          result = sx126x_chip->invertIQ(!downlink_pkt.iq_polatization_inversion); \
+	          result = sx126x_chip->invertIQ(downlink_pkt.iq_polatization_inversion); \
 	          if (result == RADIOLIB_ERR_NONE) { \
 	            result = sx126x_chip->setCRC(downlink_pkt.disable_crc ? (uint8_t) 0 : (uint8_t) 1); \
 	          } \

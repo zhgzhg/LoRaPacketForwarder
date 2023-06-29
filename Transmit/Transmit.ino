@@ -3,11 +3,11 @@
    at 2022-07-28T10:29:43.579Z board options in Arduino IDE's UI. To apply them make sure this file is saved, then click on
    Tools -> Drizzle -> Apply Markers. To obtain Drizzle visit: https://github.com/zhgzhg/Drizzle
 
-   @BoardManager esp8266::^2.7.4::https://arduino.esp8266.com/stable/package_esp8266com_index.json
+   @BoardManager esp8266::^3.1.2::https://arduino.esp8266.com/stable/package_esp8266com_index.json
    @Board esp8266::esp8266::NodeMCU 1.0 (ESP-12E Module)
    @BoardSettings esp8266::NodeMCU 1.0 (ESP-12E Module)::Builtin Led->2||Upload Speed->115200
-   @DependsOn RadioLib::^5.3.0
-   @ArduinoTool Drizzle::(<0.14.3)::https://github.com/zhgzhg/Drizzle/releases/download/0.14.3/drizzle-0.14.3-dist.zip
+   @DependsOn RadioLib::^6.1.0
+   @ArduinoTool Drizzle::(<0.16.1)::https://github.com/zhgzhg/Drizzle/releases/download/0.16.1/drizzle-0.16.1-dist.zip
 
 
    RadioLib Transmit Example - configured to be used with the receiver in this project.
@@ -76,7 +76,7 @@ void setup() {
   logMsgAndProceedOnSuccess(F("success!"), F("init failed"), state);
 
   Serial.print(F("Turning on IQ inverted transmissions... "));
-  state = lora.invertIQ(true);
+  state = lora.invertIQ(false);
   logMsgAndProceedOnSuccess(F("success!"), F("IQ inversion failed"), state);
 
   Serial.print(F("Turning on CRC in the packets... "));
