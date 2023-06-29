@@ -75,9 +75,9 @@ void setup() {
   int state = lora.begin(434.0f, 125.0f, 7, 5, 0x34, 14, 8, 0); // freq 434.0mhz, bw 125khz, sf 7, cr 5, sync-word 0x34 = lorawan, 14dBm transmit pw, preabmle 8, agc auto
   logMsgAndProceedOnSuccess(F("success!"), F("init failed"), state);
 
-  Serial.print(F("Turning on IQ inverted transmissions... "));
+  Serial.print(F("Turning off IQ inverted transmissions... "));
   state = lora.invertIQ(false);
-  logMsgAndProceedOnSuccess(F("success!"), F("IQ inversion failed"), state);
+  logMsgAndProceedOnSuccess(F("success!"), F("IQ noninversion failed"), state);
 
   Serial.print(F("Turning on CRC in the packets... "));
   state = lora.setCRC(true);
