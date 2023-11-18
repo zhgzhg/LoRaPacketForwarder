@@ -48,6 +48,7 @@ struct GpioPin
 	std::chrono::seconds duration_seconds;
 	std::chrono::seconds curr_duration_seconds;
 	bool duration_condition_already_matched;
+	time_t last_duration_condition_already_matched_flag_set_time;
 };
 
 std::vector<GpioPin> parse_config(std::ifstream& fs)
@@ -184,7 +185,16 @@ int main(int argc, char* argv[])
 				p.curr_duration_seconds.count(), p.duration_seconds.count());
 
 			if (!dura_val_match)
-			{ p.duration_condition_already_matched = false; }
+			{
+				p.duration_condition_already_matched = false;
+				p.last_duration_condition_already_matched_flag_set_time = std::time(nullptr);
+			}
+			else
+			{
+				double diff = std::difftime(std::time(nullptr),
+					p.last_duration_condition_already_matched_flag_set_time);
+				p.duration_condition_already_matched = (fabs(diff) < 5);
+			}
 
 			if (terminate_match || (!p.duration_condition_already_matched
 					&& inst_val_match && dura_val_match))
@@ -195,7 +205,8 @@ int main(int argc, char* argv[])
 				pinMode(p.wpi_pin_number, OUTPUT);
 				int curr_outp_val = digitalRead(p.wpi_pin_number);
 
-				if (curr_outp_val != outp_val) {
+				if (curr_outp_val != outp_val)
+				{
 					digitalWrite(p.wpi_pin_number, outp_val);
 					std::cout << '[' << std::time(nullptr) << "] "
 						<< temp_degC << (terminate_match ? " !" : " ")
@@ -215,7 +226,8 @@ int main(int argc, char* argv[])
 			++p.curr_duration_seconds;
 		}
 
-		for (unsigned char c = 0; keep_running == 1 && c < 5; ++c) {
+		for (unsigned char c = 0; keep_running == 1 && c < 5; ++c)
+		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(200));
 		}
 
