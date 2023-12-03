@@ -44,3 +44,21 @@ debug: $(SRC)
 
 clean:
 	rm -f ./LoRaPktFwrd
+
+install:
+	mkdir -p /etc/LoRaPacketForwarder
+	cp -f ./config.json.template /etc/LoRaPacketForwarder
+	cp -f ./config.json /etc/LoRaPacketForwarder
+	cp -f ./LoRaPktFwrd /usr/bin
+	chmod a+x /usr/bin/LoRaPktFwrd
+	cp -f LoRaPktFwrd.service /lib/systemd/system
+	systemctl daemon-reload
+
+uninstall:
+	systemctl stop LoRaPktFwrd.service
+	systemctl disable LoRaPktFwrd.service
+	rm -f /lib/systemd/system/LoRaPktFwrd.service
+	systemctl daemon-reload
+	rm -fr /etc/LoRaPacketForwarder
+	rm -f /usr/bin/LoRaPktFwrd
+

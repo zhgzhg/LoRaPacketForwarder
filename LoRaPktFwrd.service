@@ -1,0 +1,16 @@
+[Unit]
+Description=LoRa Packet Forwarder
+After=multi-user.target network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/etc/LoRaPacketForwarder
+ExecStart=/usr/bin/LoRaPktFwrd /etc/LoRaPacketForwarder/config.json
+User=root
+KillMode=process
+Restart=on-failure
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target
+Alias=LoRaPktFwrd.service
