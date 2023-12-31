@@ -6,17 +6,23 @@
    @BoardManager esp8266::^3.1.2::https://arduino.esp8266.com/stable/package_esp8266com_index.json
    @Board esp8266::esp8266::NodeMCU 1.0 (ESP-12E Module)
    @BoardSettings esp8266::NodeMCU 1.0 (ESP-12E Module)::Builtin Led->2||Upload Speed->115200
-   @DependsOn RadioLib::^6.1.0
-   @ArduinoTool Drizzle::(<0.16.1)::https://github.com/zhgzhg/Drizzle/releases/download/0.16.1/drizzle-0.16.1-dist.zip
+   @DependsOn RadioLib::^6.3.0
+   @ArduinoTool Drizzle::(<0.16.2)::https://github.com/zhgzhg/Drizzle/releases/download/0.16.2/drizzle-0.16.2-dist.zip
 
 
-   RadioLib Transmit Example - configured to be used with the receiver in this project.
+   RadioLib Transmit Example - desiged for use with the default sample JSON configuration of the LoRaPacketForwarder.
 
-   This example transmits LoRa packets with one second delays between them. Each packet contains up to 256 bytes
+   This example transmits LoRa packets with one second delays between them. Each packet contains up to 255 bytes
    of data, in the form of:
     - Arduino String
     - null-terminated char array (C-string)
     - arbitrary binary data (byte array)
+
+   ATTENTION - this sketch exemplifies a transmission with a sync-word value set to LoRaWAN, but the sent data
+   and the transmission frequency is NOT compatible with the LoRaWAN specification. For compatible examples please
+   refer to those provided by RadioLib.
+   The purpose of this sketch is to provide means for easy checking whether your current hardware and software setup
+   is able to exchange data over LoRa.
 
    For more detailed information, see the LoRaLib Wiki
    https://github.com/jgromes/RadioLib/wiki
@@ -103,7 +109,7 @@ void loop() {
 
   int state = lora.transmit(s);
 
-  // you can also transmit byte array up to 256 bytes long
+  // you can also transmit byte array up to 255 bytes long
   /*
     size_t len = 8;
     byte byteArr[len] = {0x01, 0x23, 0x45, 0x56,
@@ -120,7 +126,7 @@ void loop() {
     Serial.println(F(" bps"));
 
   } else if (state == RADIOLIB_ERR_PACKET_TOO_LONG) {
-    // the supplied packet was longer than 256 bytes
+    // the supplied packet was longer than 255 bytes
     Serial.println(F(" - error, too long!"));
 
   } else if (state == RADIOLIB_ERR_TX_TIMEOUT) {
