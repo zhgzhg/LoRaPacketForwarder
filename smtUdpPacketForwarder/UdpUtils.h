@@ -50,21 +50,27 @@
 
 #define BASE64_MAX_LENGTH 341
 
+typedef enum PackagedDataContentType : char
+{
+  STAT_PUSH = 0, UPLINK_PUSH, DOWNLINK_REQ, DOWNLINK_TRANSMIT
+} PackagedDataContentType_t;
 
 typedef struct PackagedDataToSend
 {
   uint32_t curr_attempt;
+  PackagedDataContentType_t data_type;
   uint32_t data_len;
   std::unique_ptr<uint8_t> data;
   Server_t destination;
   bool logged;
   std::time_t schedule;
 
-  PackagedDataToSend(uint32_t curr_attempt, uint32_t data_len, uint8_t *data_content, Server_t& destination)
+  PackagedDataToSend(uint32_t curr_attempt, PackagedDataContentType_t data_type, uint32_t data_len, uint8_t *data_content, Server_t& destination)
   {
     this->logged = false;
     this->schedule = 0;
     this->curr_attempt = curr_attempt;
+    this->data_type = data_type;
     this->data_len = data_len;
     this->data = std::unique_ptr<uint8_t>(data_content);
     this->destination = destination; 
@@ -75,6 +81,7 @@ typedef struct PackagedDataToSend
     logged = origin.logged;
     schedule = origin.schedule;
     curr_attempt = origin.curr_attempt;
+    data_type = origin.data_type;
     data_len = origin.data_len;
     data = std::move(origin.data);
     destination = origin.destination;
@@ -92,7 +99,7 @@ bool RecvUdp(Server_t &server, char *msg, int size,
              std::function<bool(char*, int, char*, int*)> &validator);
 NetworkConf_t PrepareNetworking(const char* networkInterfaceName, suseconds_t dataRecvTimeout, char gatewayId[25]);
 
-void EnqueuePacket(uint8_t *data, uint32_t data_length, Server_t& dest, Direction direction);
+void EnqueuePacket(uint8_t *data, uint32_t data_length, PackagedDataContentType_t data_type, Server_t& dest, Direction direction);
 bool RequeuePacket(PackagedDataToSend_t &&packet, uint32_t maxAttempts, Direction direction);
 PackagedDataToSend_t DequeuePacket(Direction direction);
 

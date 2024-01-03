@@ -98,7 +98,6 @@ typedef struct LoRaPacketTrafficStats {
   uint32_t recv_packets;
   uint32_t recv_packets_crc_good;
   uint32_t forw_packets;
-  uint32_t forw_packets_crc_good;
   volatile uint32_t acked_forw_packets;
   volatile uint32_t downlink_recv_packets;
   uint32_t downlink_tx_packets;

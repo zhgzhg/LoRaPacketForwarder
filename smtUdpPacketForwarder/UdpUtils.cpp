@@ -18,7 +18,7 @@ static const std::map<Direction, std::timed_mutex&> direction_to_mutex = {
 };
 
 static Server_t NO_SERVER;
-PackagedDataToSend_t NO_PACKAGED_DATA{0UL, 0UL, {}, NO_SERVER};
+PackagedDataToSend_t NO_PACKAGED_DATA{0UL, STAT_PUSH, 0UL, {}, NO_SERVER};
 
 static std::map<std::string, std::pair<time_t, struct in_addr> > hostname_cache;
 
@@ -123,7 +123,7 @@ bool RecvUdp(Server_t &server, char *msg, int size,
       uint8_t *packet = new uint8_t[j - 3];
       memcpy(packet, msg + 4, j - 4);
       packet[j - 4] = '\0';
-      EnqueuePacket(packet, j - 4, server, DOWN_RX);
+      EnqueuePacket(packet, j - 4, DOWNLINK_TRANSMIT, server, DOWN_RX);
 
       return true;
     }
@@ -252,7 +252,7 @@ bool RequeuePacket(PackagedDataToSend_t &&packet, uint32_t maxAttempts, Directio
   return true;
 }
 
-void EnqueuePacket(uint8_t *data, uint32_t data_length, Server_t& dest, Direction direction) // {{{
+void EnqueuePacket(uint8_t *data, uint32_t data_length, PackagedDataContentType_t data_type, Server_t& dest, Direction direction) // {{{
 {
   if (data == nullptr) return;
 
@@ -267,7 +267,7 @@ void EnqueuePacket(uint8_t *data, uint32_t data_length, Server_t& dest, Directio
     return;
   }
 
-  PackagedDataToSend_t packaged_data{ 0UL, data_length, data, dest };
+  PackagedDataToSend_t packaged_data{ 0UL, data_type, data_length, data, dest };
   direction_to_queue.at(direction).push(std::move(packaged_data));
 } // }}}
 
@@ -295,6 +295,7 @@ PackagedDataToSend_t DequeuePacket(Direction direction) // {{{
 void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pktStats) // {{{
 {
   // see https://github.com/Lora-net/packet_forwarder/blob/master/PROTOCOL.TXT
+  // also see document ANNWS.01.2.1.W.SYS
 
   char status_report[STATUS_MSG_SIZE]; /* status report as a JSON object */
   char stat_timestamp[24];
@@ -375,7 +376,7 @@ void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pk
     size_t packet_sz = stat_index + json.size();
     uint8_t *packet = new uint8_t[packet_sz];
     memcpy(packet, status_report, packet_sz);
-    EnqueuePacket(packet, packet_sz, serv, UP_TX);
+    EnqueuePacket(packet, packet_sz, STAT_PUSH, serv, UP_TX);
   }
 
 } // }}}
@@ -383,6 +384,7 @@ void PublishStatProtocolPacket(PlatformInfo_t &cfg, LoRaPacketTrafficStats_t &pk
 void PublishLoRaUplinkProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPacket) // {{{
 {
   // see https://github.com/Lora-net/packet_forwarder/blob/master/PROTOCOL.TXT
+  // also see document ANNWS.01.2.1.W.SYS
 
   char buff_up[TX_BUFF_UP_SIZE]; /* buffer to compose the upstream packet */
   int buff_index = 0;
@@ -480,7 +482,7 @@ void PublishLoRaUplinkProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPac
     size_t packet_sz = buff_index + json.size();
     uint8_t *packet = new uint8_t[packet_sz];
     memcpy(packet, buff_up, packet_sz);
-    EnqueuePacket(packet, packet_sz, serv, UP_TX);
+    EnqueuePacket(packet, packet_sz, UPLINK_PUSH, serv, UP_TX);
   }
 
 } // }}}
@@ -511,6 +513,6 @@ void PublishLoRaDownlinkProtocolPacket(PlatformInfo_t &cfg) // {{{
 
     uint8_t *packet = new uint8_t[sizeof(buff_up)];
     memcpy(packet, buff_up, sizeof(buff_up));
-    EnqueuePacket(packet, sizeof(buff_up), serv, DOWN_TX);
+    EnqueuePacket(packet, sizeof(buff_up), DOWNLINK_REQ, serv, DOWN_TX);
   }
 } // }}}

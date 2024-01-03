@@ -67,19 +67,19 @@ void appIntubator(char* const argv[]) { // {{{
   }
 } // }}}
 
-void networkPacketExhangeWorker(LoRaPacketTrafficStats_t *loraPacketStats,
+void networkPacketExchangeWorker(LoRaPacketTrafficStats_t *loraPacketStats,
                                 std::vector<Server_t> *servers) { // {{{
 
   static std::function<bool(char*, int, char*, int)> isValidUplinkAck =
-    [](char* origMsg, int origMsgSz, char* respMsg, int respMsgSz) {
+    [](char* origMsg, int origMsgSz, char* respMsg, int respMsgSz) { // {{{
         if (origMsg != nullptr && origMsgSz > 4 && respMsg != nullptr && respMsgSz >= 4) {
           return origMsg[0] == respMsg[0] && origMsg[1] == respMsg[1] &&
                     origMsg[2] == respMsg[2] && (respMsg[3] == PKT_PUSH_ACK || respMsg[3] == PKT_PULL_ACK);
         }
         return false;
-  };
+  }; // }}}
   static std::function<bool(char*, int, char*, int*)> isValidDownlinkPkt =
-    [](char *origMsg, int origMsgSz, char* respErrorJsonMsg, int *maxRespErrorJsonMsgSz) {
+    [](char *origMsg, int origMsgSz, char* respErrorJsonMsg, int *maxRespErrorJsonMsgSz) { // {{{
         if (origMsg != nullptr && origMsgSz > 15 && origMsg[0] == PROTOCOL_VERSION &&
             origMsg[3] == PKT_PULL_RESP)
         {
@@ -96,15 +96,15 @@ void networkPacketExhangeWorker(LoRaPacketTrafficStats_t *loraPacketStats,
         }
 
         return false;
-  };
+  }; // }}}
 
-  struct TxPacket {
+  struct TxPacket { // {{{
     PackagedDataToSend_t packet;
     Direction direction;
 
     TxPacket(PackagedDataToSend_t&& pkt, Direction directn) : packet(std::move(pkt)), direction(directn)
     { }
-  };
+  }; // }}}
 
   char downlinkMsg[RX_BUFF_DOWN_SIZE];
   bool iterateImmediately;
@@ -145,7 +145,7 @@ void networkPacketExhangeWorker(LoRaPacketTrafficStats_t *loraPacketStats,
             { printf("(%s) Requeued the %s packet.\n", asciiTime, (direction == UP_TX ? "uplink" : "downlink fetch request")); }
             fflush(stdout);
           }
-          else
+          else if (direction == UP_TX && packet.data_type == UPLINK_PUSH)
           { ++(loraPacketStats->acked_forw_packets); }
        }
     }
@@ -272,7 +272,7 @@ int main(int argc, char **argv) {
   schedPrio.sched_priority = sched_get_priority_max(SCHED_RR) - 10;
   sched_setscheduler(0, SCHED_RR, (const sched_param*) &schedPrio);
 
-  std::thread packetExchanger{networkPacketExhangeWorker, &loraPacketStats, &cfg.servers};
+  std::thread packetExchanger{networkPacketExchangeWorker, &loraPacketStats, &cfg.servers};
   if (useIntubator) {
     std::thread intubator{appIntubator, argv};
     intubator.detach();
@@ -287,12 +287,8 @@ int main(int argc, char **argv) {
       nextStatUpdateTime = currTime + sendStatPktIntervalSeconds;
 
       PublishStatProtocolPacket(cfg, loraPacketStats);
-      ++loraPacketStats.forw_packets_crc_good;
-      ++loraPacketStats.forw_packets;
 
       PublishLoRaDownlinkProtocolPacket(cfg);
-      ++loraPacketStats.forw_packets_crc_good;
-      ++loraPacketStats.forw_packets;
     }
 
     if (!keepRunning) break;
@@ -301,6 +297,7 @@ int main(int argc, char **argv) {
                         lora, cfg, loraDataPacket, msg, loraPacketStats);
 
     if (lastRecvResult == LoRaRecvStat::DATARECV) {
+      ++loraPacketStats.forw_packets;
       PublishLoRaUplinkProtocolPacket(cfg, loraDataPacket);
       lastRFInteractionTime = std::time(nullptr);
     } else if (keepRunning && lastRecvResult == LoRaRecvStat::NODATA) {
