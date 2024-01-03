@@ -61,3 +61,5 @@ uninstall:
 	rm -fr /etc/LoRaPacketForwarder
 	rm -f /usr/bin/LoRaPktFwrd
 
+getsvclogs:
+	journalctl -n 100 -f -u LoRaPktFwrd.service
