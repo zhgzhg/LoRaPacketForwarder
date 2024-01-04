@@ -162,11 +162,12 @@ As a prerequisite make sure the project is compiled (via the `make` command) and
 * To uninstall the service use: `sudo make uninstall`
 * To allow the service to run automatically after the system boots: `sudo systemctl enable LoRaPktFwrd.service`
 * To disallow the service to run automatically after the system boots: `sudo systemctl disable LoRaPktFwrd.service`
-* To manually start / restart/ stop the service:
+* To manually start / restart/ stop / check the status of the service:
 ```
 sudo service LoRaPktFwrd start
 sudo service LoRaPktFwrd restart
 sudo service LoRaPktFwrd stop
+sudo service LoRaPktFwrd status
 ```
 * To inspect the latest logs of the service: `sudo journalctl -n 100 -f -u LoRaPktFwrd.service`
 
