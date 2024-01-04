@@ -153,6 +153,23 @@ to use its **latest** version.
 * To get the supported CLI options:
     * `./LoRaPktFwrd -h`
 
+### Running LoRa UDP Packet Forwarder as a System Service
+
+This project can be installed as a Systemd service (refer to file `LoRaPktFwrd.service`) which optionally may start automatically after the system boots.
+As a prerequisite make sure the project is compiled (via the `make` command) and it is able to execute correctly with your own `config.json` file.
+
+* To install the LoRaPktFwrd service you can execute `sudo make install`
+* To uninstall the service use `sudo make uninstall`
+* To allow the service to run automatically after the system boots: `sudo systemctl enable LoRaPktFwrd.service`
+* To disallow the service to run automatically after the system boots: `sudo systemctl disable LoRaPktFwrd.service`
+* To manually start / restart/ stop the service:
+```
+sudo service LoRaPktFwrd start
+sudo service LoRaPktFwrd restart
+sudo service LoRaPktFwrd stop
+```
+* To inspect the latest logs of the service: `sudo journalctl -n 100 -f -u LoRaPktFwrd.service`
+
 
 ## Dependencies
 
