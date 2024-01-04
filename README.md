@@ -158,8 +158,8 @@ to use its **latest** version.
 This project can be installed as a Systemd service (refer to file `LoRaPktFwrd.service`) which optionally may start automatically after the system boots.
 As a prerequisite make sure the project is compiled (via the `make` command) and it is able to execute correctly with your own `config.json` file.
 
-* To install the LoRaPktFwrd service you can execute `sudo make install`
-* To uninstall the service use `sudo make uninstall`
+* To install the LoRaPktFwrd service you can execute: `sudo make install`
+* To uninstall the service use: `sudo make uninstall`
 * To allow the service to run automatically after the system boots: `sudo systemctl enable LoRaPktFwrd.service`
 * To disallow the service to run automatically after the system boots: `sudo systemctl disable LoRaPktFwrd.service`
 * To manually start / restart/ stop the service:
