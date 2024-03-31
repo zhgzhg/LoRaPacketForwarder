@@ -147,7 +147,6 @@ void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
 	    } else { \
 	      SX126x* sx126x_chip = dynamic_cast<SX126x*>(origin); \
 	      if (sx126x_chip != nullptr) { \
-	        sx126x_chip->XTAL = true; \
 	        result = sx126x_chip->invertIQ(false); \
 	        if (result == RADIOLIB_ERR_NONE) { \
 	          result = sx126x_chip->setCRC((uint8_t) 1); \
@@ -185,7 +184,6 @@ void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
 	      } else { \
 	        SX126x* sx126x_chip = dynamic_cast<SX126x*>(origin); \
 	        if (sx126x_chip != nullptr) { \
-	          sx126x_chip->XTAL = true; \
 	          result = sx126x_chip->invertIQ(downlink_pkt.iq_polatization_inversion); \
 	          if (result == RADIOLIB_ERR_NONE) { \
 	            result = sx126x_chip->setCRC(downlink_pkt.disable_crc ? (uint8_t) 0 : (uint8_t) 1); \
@@ -205,8 +203,6 @@ void hexPrint(uint8_t data[], int length, FILE *dest) { // {{{
 	      downlink_pkt.preamble_length, \
 	      false /* don't use OOK */ \
 	    ); \
-	    SX126x* sx126x_chip = dynamic_cast<SX126x*>(origin); \
-	    if (sx126x_chip != nullptr) sx126x_chip->XTAL = true; \
 	    if (result == RADIOLIB_ERR_NONE) result = chip->setSyncWord(gfskSyncWord, ((uint8_t) sizeof(gfskSyncWord))); \
 	  } \
 	  if (result == RADIOLIB_ERR_NONE) result = chip->setCurrentLimit(current_lim_ma); \
@@ -267,7 +263,16 @@ PhysicalLayer* instantiateLoRaChip(LoRaChipSettings_t& lora_chip_settings, SPICl
     spiSettings
   );
 
-  return LORA_CHIPS.at(lora_chip_settings.ic_model)(module_settings);
+  auto instance = LORA_CHIPS.at(lora_chip_settings.ic_model)(module_settings);
+
+  SX126x* sx126x_chip = dynamic_cast<SX126x*>(instance);
+  if (sx126x_chip != nullptr)
+  {
+    sx126x_chip->XTAL = true;
+    sx126x_chip->standbyXOSC = true;
+  }
+
+  return instance;
 } // }}}
 
 #define PKT_ENRICHER(origin_class, instance_ptr, inst_type_info, lora_packet, freq_err) \
