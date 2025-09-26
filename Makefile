@@ -9,7 +9,7 @@ RM        := rm -f
 # Libraries / flags
 LIBS      := -lwiringPi -lm -lpthread -lrt -lcrypt
 CPPFLAGS  :=
-CXXFLAGS  := -std=gnu++14 -Wall -DLINUX -DARDUINO=999 -DRADIOLIB_FIX_ERRATA_SX127X
+CXXFLAGS  := -std=c++14 -Wall -DLINUX -DARDUINO=999 -DRADIOLIB_FIX_ERRATA_SX127X
 CFLAGS    := -Wall
 LDFLAGS   :=
 
