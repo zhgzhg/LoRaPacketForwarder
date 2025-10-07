@@ -1,4 +1,5 @@
 #include "TimeUtils.h"
+#include <cstdio>
 #include <cstring>
 #include <mutex>
 #include <chrono>
@@ -11,7 +12,7 @@ struct tm* ts_localtime_r(const time_t& timer, struct tm *buf)
 
     struct tm *result{std::localtime(&timer)};
 
-    std::memcpy(buf, result, sizeof(struct tm ));
+    std::memcpy(buf, result, sizeof(struct tm));
 
     return buf;
 }
@@ -21,6 +22,42 @@ const char* ts_asciitime(const time_t& timer, char *buf, size_t buf_sz)
     struct tm ltime;
     std::strftime(buf, buf_sz, "%c", ts_localtime_r(timer, &ltime));
     return buf;
+}
+
+int iso8601_utc_extended_now(const struct timeval *now, char *result, size_t result_sz)
+{
+    if (now == nullptr || result == nullptr || result_sz < 21) return -1; // need at least "YYYY-MM-DDTHH:MM:SSZ"
+
+    struct tm tm;
+    if (gmtime_r(&now->tv_sec, &tm) == NULL) return -1;
+
+    // Base ISO 8601 time: YYYY-MM-DDTHH:MM:SS
+    size_t len = strftime(result, result_sz, "%FT%T", &tm);
+    if (len == 0) {
+        if (result_sz > 0) result[0] = '\0';
+        return -1;
+    }
+
+    // Fractional seconds: .uuuuuuZ (total length = 28)
+    // support up to micros, although the spec allows even more
+
+    if (len + 8 + 1 > result_sz) {
+	if (len + 1 < result_sz) { // fallback to shorter form
+            result[len] = 'Z';
+            result[len + 1] = '\0';
+            return 0;
+	}
+        result[result_sz - 1] = '\0';
+        return -1;
+    }
+
+    int n = snprintf(result + len, result_sz - len, ".%06ldZ", (long) now->tv_usec);
+    if (n < 0 || (size_t) n >= result_sz - len) {
+        result[result_sz - 1] = '\0';
+        return -1;
+    }
+
+    return 0;
 }
 
 time_t add_seconds(const time_t to, int seconds)

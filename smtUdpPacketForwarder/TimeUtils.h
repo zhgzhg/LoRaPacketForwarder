@@ -7,12 +7,15 @@
 #endif
 
 #include <ctime>
+#include <sys/time.h>
 #include <cstdint>
 #include <type_traits>
 
 struct tm* ts_localtime_r(const time_t& timer, struct tm *buf);
 
 const char* ts_asciitime(const time_t& timer, char *buf, size_t buf_sz);
+
+int iso8601_utc_extended_now(const struct timeval *now, char *result, size_t result_sz);
 
 time_t add_seconds(const time_t to, int seconds);
 

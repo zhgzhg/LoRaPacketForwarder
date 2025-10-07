@@ -406,9 +406,8 @@ void PublishLoRaUplinkProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPac
   // unix epoch in seconds ts to GPS timestamp in millis
   uint64_t tmms = std::round( (unix2gps(now.tv_sec, false) * 1000.0) + (now.tv_usec / 1000) );
 
-  char compact_iso8610_time[28];
-  strftime(compact_iso8610_time, sizeof compact_iso8610_time, "%FT%T", gmtime(&now.tv_sec));
-  sprintf(compact_iso8610_time, "%s.%ldZ", compact_iso8610_time, now.tv_usec);
+  char extended_iso8610_time[28] = {0};
+  iso8601_utc_extended_now(&now, extended_iso8610_time, sizeof extended_iso8610_time);
 
   // Build JSON object.
   rapidjson::StringBuffer sb;
@@ -418,7 +417,7 @@ void PublishLoRaUplinkProtocolPacket(PlatformInfo_t &cfg, LoRaDataPkt_t &loraPac
   writer.StartArray();
   writer.StartObject();
   writer.String("time");
-  writer.String(compact_iso8610_time);
+  writer.String(extended_iso8610_time);
   writer.String("tmms");
   writer.Uint64(tmms); 
   writer.String("tmst");
