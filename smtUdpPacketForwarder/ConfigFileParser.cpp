@@ -1,3 +1,4 @@
+#include <regex>
 #include "ConfigFileParser.h"
 #include "version.h"
 
@@ -33,14 +34,24 @@ void PrintConfiguration(PlatformInfo_t &cfg)
   fflush(stdout);
 }
 
-void SetGatewayIdentifier(PlatformInfo_t &cfg, const char identifier[25])
+bool SetGatewayIdentifier(PlatformInfo_t &cfg, const char identifier[25])
 {
-  memset(cfg.__identifier, 0, sizeof(cfg.__identifier));
-  if (identifier)
-  { strncpy(cfg.__identifier, identifier, sizeof(cfg.__identifier) - 1); }
+  if (cfg.__identifier[0] != '\0')
+  { return true; }
+
+  if (!identifier)
+  { return false; }
+
+  const std::regex hex8pairs(R"(^([0-9A-Fa-f]{2}:){7}[0-9A-Fa-f]{2}$)");
+  if (!std::regex_match(identifier, hex8pairs))
+  { return false; }
+
+  memset(cfg.__identifier, 0, sizeof(cfg.__identifier));  
+  strncpy(cfg.__identifier, identifier, sizeof(cfg.__identifier) - 1);
+  return true;
 }
 
-PlatformInfo_t LoadConfiguration(std::string configurationFile)
+PlatformInfo_t LoadConfiguration(std::string configurationFile, const char overriddenEUI[25])
 {
   FILE* p_file = fopen(configurationFile.c_str(), "r");
   if (p_file == nullptr)
@@ -55,7 +66,10 @@ PlatformInfo_t LoadConfiguration(std::string configurationFile)
   rapidjson::Document doc;
   doc.ParseStream(fs);
 
-  PlatformInfo_t result;
+  PlatformInfo_t result{};
+
+  if (overriddenEUI[0] != '\0' && !SetGatewayIdentifier(result, overriddenEUI))
+  { fclose(p_file); printf("Incorrect overriding EUI format '%s'\n"); }
 
   result.lora_chip_settings.ic_model = std::string(doc["ic_model"].GetString());
 

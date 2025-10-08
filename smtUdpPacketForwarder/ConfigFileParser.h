@@ -20,8 +20,8 @@
 
 #include "config.h"
 
-PlatformInfo_t LoadConfiguration(std::string configurationFile);
-void SetGatewayIdentifier(PlatformInfo_t &cfg, const char identifier[25]);
+PlatformInfo_t LoadConfiguration(std::string configurationFile, const char overriddenEUI[25]);
+bool SetGatewayIdentifier(PlatformInfo_t &cfg, const char identifier[25]);
 void PrintConfiguration(PlatformInfo_t &cfg);
 
 #endif

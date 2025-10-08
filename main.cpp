@@ -159,10 +159,15 @@ PlatformInfo_t loadConfig(int argc, char **argv, const char **confFile, bool *us
                             char *networkIfaceName, size_t networkIfaceNameSz) { // {{{
 
   int opt;
-  while ((opt = getopt(argc, argv, "c:dvh")) != -1) {
+  char overriddenEUI[25] = {0};
+
+  while ((opt = getopt(argc, argv, "c:i:dvh")) != -1) {
     switch (opt) {
       case 'c':
         *confFile = optarg;
+        break;
+      case 'i':
+        strncpy(overriddenEUI, optarg, sizeof overriddenEUI);
         break;
       case 'd':
         *useIntubator = false;
@@ -172,11 +177,12 @@ PlatformInfo_t loadConfig(int argc, char **argv, const char **confFile, bool *us
         exit(0);
       case 'h':
       default: // i.e. ?
-        fprintf(stderr, "Usage:\n%s [-h] [-v] [-c config.json] [-d] [network_interface_name]\n"
+        fprintf(stderr, "Usage:\n%s [-h] [-v] [-c config.json] [-i 01:02:03:04:AA:CC:DD:FF] [-d] [network_interface_name]\n"
             "  -h displays this help\n"
             "  -v displays the version of the tool\n\n"
 
             "  -c specifies the JSON configuration file (by default config.json)\n"
+            "  -i use concrete EUI (format xx:xx:xx:xx:xx:xx:xx:xx) instead of taking the network interface one\n"
             "  -d disables the automatic restart of the program if a stuck has been detected\n"
             "  network_interface_name (by default eth0) is used to compute the EUI\n", argv[0]);
         exit(opt == 'h' ? 0 : EXIT_FAILURE);
@@ -187,20 +193,19 @@ PlatformInfo_t loadConfig(int argc, char **argv, const char **confFile, bool *us
     strncpy(networkIfaceName, argv[optind], networkIfaceNameSz);
   }
 
-  return LoadConfiguration(*confFile);
+  return LoadConfiguration(*confFile, overriddenEUI);
 } // }}}
 
 int main(int argc, char **argv) {
 
   time_t currTime{std::time(nullptr)};
-  char asciiTime[25];
+  char asciiTime[25] = {0};
 
   ts_asciitime(currTime, asciiTime, sizeof(asciiTime));
   printf("(%s) Started %s...\n", asciiTime, argv[0]);
 
   char networkIfaceName[64] = "eth0";
-  char gatewayId[25];
-  memset(gatewayId, 0, sizeof(gatewayId));
+  char gatewayId[25] = {0};
 
   const char *configFilePath = "config.json";
   bool useIntubator = true;
@@ -215,7 +220,11 @@ int main(int argc, char **argv) {
        PrepareNetworking(networkIfaceName, serv.receive_timeout_ms * 1000, gatewayId);
   }
 
-  SetGatewayIdentifier(cfg, gatewayId);
+  if (!SetGatewayIdentifier(cfg, gatewayId))
+  {
+    printf("Invalid device EUI %s\n!", gatewayId);
+    return 16;
+  }
   PrintConfiguration(cfg);
 
   SPISettings spiSettings{cfg.lora_chip_settings.spi_speed_hz, MSBFIRST,
