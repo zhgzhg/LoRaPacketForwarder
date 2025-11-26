@@ -12,7 +12,7 @@ The goal of the project is to provide simple LoRa forwarder for:
 
 * Linux - Orange Pi, Raspberry Pi, etc.
 * Supports the Semtech UDP protocol v2 - uplink, downlink, and stats:
-    * The Things Network - tested V2 and V3
+    * The Things Network - tested V2, V3, and V4
     * ChirpStack - tested V3
 * Supported LoRaWAN device classes:
     * class A , LoRa modulation - tested
